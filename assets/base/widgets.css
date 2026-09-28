@@ -1,0 +1,206 @@
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 2px; }
+
+  /* sortable tables */
+  th[data-sort-dir]::after { content: "↕"; opacity: .4; margin-left: .4em; font-size: .8em; }
+  th[data-sort-dir="asc"]::after  { content: "▲"; opacity: 1; }
+  th[data-sort-dir="desc"]::after { content: "▼"; opacity: 1; }
+
+  /* filter input */
+  .filter-input {
+    background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: .5em .8em; font-size: .88rem; width: min(320px, 100%);
+  }
+  .filter-input::placeholder { color: var(--muted); }
+
+  /* tabs */
+  .tab-list { display: flex; gap: .3rem; border-bottom: 1px solid var(--border); margin: 1rem 0 0; }
+  .tab-list [role="tab"] {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    padding: .55em .9em; font: inherit; font-size: .9rem; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color .15s, border-color .15s;
+  }
+  .tab-list [role="tab"]:hover { color: var(--text); }
+  .tab-list [role="tab"][aria-selected="true"] { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-panel { padding-top: 1rem; }
+
+  /* collapsible (native <details>) */
+  details.section { border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); margin: 1rem 0; }
+  details.section > summary {
+    cursor: pointer; padding: .7em 1em; font-weight: 600; color: var(--text);
+    list-style: none; display: flex; align-items: center; gap: .5em;
+  }
+  details.section > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+  details.section[open] > summary::before { transform: rotate(90deg); }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > *:not(summary) { padding: 0 1em 1em; }
+
+  /* ── Contents: a drawer on screen, a contents page on paper ──────────────
+     ONE element, two presentations. The layout is now one column with a single
+     left and right edge, print-identical, so the contents cannot take a rail --
+     a persistent rail is what put a second left edge on the page. But a contents
+     list at the top of a long report is close to useless: a reader needs to know
+     where they ARE and jump from wherever they have got to.
+
+     Two patterns say the same thing. Kindle and Apple Books open the contents as
+     a panel that slides in over the page, so the reader never loses their place.
+     Wikipedia's 2023 redesign made its contents sticky and position-aware and
+     A/B-tested it at +53% clicks (logged-in) and +45.5% (logged-out) -- readers
+     do use one when it tracks them, and do not when it does not.
+
+     A drawer takes both: always reachable, position-aware, and costing ZERO
+     layout space. In print it becomes a plain block at the top, which is what a
+     printed report wants and what a drawer cannot give it. */
+  .toc {
+    position: fixed; z-index: 70; inset: 0 auto 0 0;
+    width: min(23rem, 84vw); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    padding: 1.4rem 1.3rem 2rem; font-size: .88em; line-height: 1.45;
+    transform: translateX(-100%); transition: transform .22s ease;
+    box-shadow: var(--shadow);
+  }
+  .toc[data-open] { transform: none; }
+  .toc-backdrop {
+    position: fixed; inset: 0; z-index: 69; background: rgba(0,0,0,.32);
+    opacity: 0; pointer-events: none; transition: opacity .22s ease;
+  }
+  .toc-backdrop[data-open] { opacity: 1; pointer-events: auto; }
+  .toc-title {
+    font-family: var(--font-mono); font-size: max(11.5px, .72rem); letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 .8rem;
+  }
+  /* Reading position, always visible. Every e-reader shows it; a report that
+     runs nine printed pages needs it as much as a book does. */
+  .read-progress {
+    position: fixed; top: 0; left: 0; z-index: 68; height: 2px; width: 0;
+    background: var(--blue); transition: width .1s linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toc { transition: none; } .toc-backdrop { transition: none; }
+    .read-progress { transition: none; }
+  }
+  /* No `.toc > summary` styling. The contents used to be a <details> and the
+     collapse ran through `.toc > summary` / `.toc[open] > summary::before`; the
+     drawer is a fixed panel toggled by script, so those rules had nothing to
+     match and were dead. PR #31 found the same class of mismatch from the other
+     side -- the builder emitted a <nav> while the CSS only worked for a
+     <details>, so the collapse affordance never existed at all. */
+  .toc ul { list-style: none; padding: 0; margin: 0; }
+  .toc a {
+    display: block; padding: .3em .6em; margin-left: -.6em; border-radius: 3px;
+    color: var(--muted); text-decoration: none;
+  }
+  .toc a:hover { color: var(--text); background: var(--bg3); }
+  /* The one thing that makes a contents list worth opening: where you are. */
+  .toc a.active { color: var(--text); font-weight: 600; background: var(--bg3); }
+  .toc .toc-h3 a { padding-left: 1.5em; font-size: .95em; }
+  .toc:empty, .toc ul:empty { display: none; }
+
+  /* copy button */
+  .copy-btn {
+    background: var(--bg3); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 5px; padding: .2em .6em; font-size: .78rem; cursor: pointer;
+  }
+  .copy-btn:hover { color: var(--text); }
+
+  /* chart tooltip */
+  .chart-tip {
+    position: fixed; z-index: 50; pointer-events: none;
+    background: var(--bg3); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: .35em .6em; font-size: .78rem;
+    font-variant-numeric: tabular-nums; box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  }
+  svg [data-tip] { cursor: pointer; }
+
+  /* ── Reader bar — theme, and the contents drawer ─────────────────────────
+     The density toggle is gone: it was a decision dressed up as a choice. See
+     the rhythm note in layout.md for the measured single value that replaced it. */
+  /* Two bordered pills at the top of an article are the loudest thing on the
+     page and the first thing that makes it read as an app. Plain muted text,
+     underlined on hover, sized like a caption. */
+  /* FIXED, not in the flow. A contents drawer whose button scrolls away with the
+     header is unreachable from page four, which is where you want it. Every
+     e-reader keeps its control in persistent chrome for the same reason.
+     Text-only and muted, so a permanently visible control stays quiet. */
+  .reader-bar {
+    position: fixed; z-index: 66; top: .55rem; right: 1rem;
+    display: flex; gap: 1rem; align-items: baseline;
+    background: var(--bg); padding: .35rem .6rem; border-radius: 4px;
+  }
+  .reader-bar .rb-btn { background: none; border: none; padding: 0; cursor: pointer;
+                font: inherit; font-family: var(--font-mono); font-size: max(11.5px, .7rem);
+                letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .reader-bar .rb-btn:hover { color: var(--text); text-decoration: underline;
+                text-underline-offset: .25em; }
+
+  /* ── Heading anchors — a deep link the reader can copy ─────────────────── */
+  .report-grid h2, .report-grid h3 { position: relative; }
+  a.hanchor { position: absolute; left: -1.05em; top: 0; width: 1em; text-align: center;
+              color: var(--muted); opacity: 0; text-decoration: none; font-weight: 400;
+              transition: opacity .12s; }
+  h2:hover > a.hanchor, h3:hover > a.hanchor, a.hanchor:focus-visible { opacity: .65; }
+  a.hanchor:hover { opacity: 1; color: var(--blue); }
+  @media (max-width: 949px) { a.hanchor { display: none; } }
+
+  /* ── Facet chips — filter a list of findings or cards by one attribute.
+     Tables get [data-filter]; everything else gets facets. */
+  .facets { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+  .facets .fc { background: var(--bg2); color: var(--muted); border: 1px solid var(--border);
+                border-radius: 999px; padding: .18em .7em; font: inherit; font-size: .78rem;
+                cursor: pointer; }
+  .facets .fc[aria-pressed="true"] { color: var(--text); border-color: var(--muted); background: var(--bg3); }
+  .facets .fc .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: .35em; }
+  [data-facet][hidden] { display: none; }
+
+  /* ── Cross-reference preview — hover an internal link, see where it lands.
+     The text is lifted from the target section at runtime, so it can never
+     disagree with the document. */
+  .xref-pop { position: fixed; z-index: 60; max-width: 22rem; pointer-events: none;
+              background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+              border-radius: 8px; padding: .6em .8em; font-size: .82rem; line-height: 1.5;
+              box-shadow: var(--shadow); }
+  .xref-pop b { display: block; font-size: .72rem; text-transform: uppercase;
+                letter-spacing: .06em; color: var(--muted); margin-bottom: .3em; }
+
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+
+  /* print: strip interactive chrome, expand everything, show every row.
+     Paper has no horizontal scroll — anything relying on overflow-x is CLIPPED, not scrollable,
+     so wide tables must be released to wrap or they lose their right-hand columns. */
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body { max-width: none !important; padding: 0 !important; }
+    .full { width: 100% !important; }
+    [style*="overflow-x"], .scroll-x { overflow: visible !important; }
+    table { table-layout: fixed; overflow-wrap: break-word; font-size: 7.5pt; }
+    figure, tr, .finding, .callout, details.section { break-inside: avoid; }
+    img { max-width: 100% !important; }
+    [data-theme-toggle], .filter-input, .copy-btn,
+    .reader-bar, .facets, a.hanchor, .xref-pop,
+    .toc-backdrop, .read-progress { display: none !important; }
+    /* The drawer becomes a contents page. A printed report wants one, and this
+       is the only presentation a drawer cannot give it. */
+    .toc {
+      display: block !important;
+      position: static !important; inset: auto !important; transform: none !important;
+      width: auto !important; max-height: none !important; overflow: visible !important;
+      background: none !important; border: 1px solid #c9c9c9 !important;
+      box-shadow: none !important; break-inside: avoid;
+      columns: 2; column-gap: 2rem; padding: .8rem 1rem !important;
+      margin: 1.2rem 0 1.6rem !important; font-size: .85em;
+    }
+    .toc-title { display: block !important; }
+    .toc[inert] { pointer-events: auto; }
+    .toc a { color: #000 !important; background: none !important; font-weight: 400 !important; }
+    .report-grid { display: block !important; }
+    [data-facet][hidden] { display: block !important; }   /* reveal faceted-out items */
+    .evidence[open] > *, .evidence > *:not(summary) { display: block !important; }
+    th[data-sort-dir]::after { content: "" !important; }
+    tr { display: table-row !important; }                 /* reveal filtered-out rows */
+    details.section { border-color: #c9c9c9; }
+    details.section > summary::before { content: "" !important; }
+    details.section > *:not(summary) { display: block !important; padding: 0 1em 1em; }  /* expand */
+    .tab-list { display: none !important; }               /* reveal every tab panel, stacked + labeled */
+    .tab-panel[hidden] { display: block !important; }
+    .tab-panel[data-label]::before { content: attr(data-label); display: block; font-weight: 700; margin: 1.2rem 0 .3rem; }
+  }

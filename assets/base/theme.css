@@ -1,0 +1,298 @@
+  :root {
+    /* light (default / prefers-color-scheme: light) — cool-biased neutrals */
+    --bg:#fbfcfe; --bg2:#f1f4f9; --bg3:#e6ebf2; --border:#d3dae4;
+    --text:#1b2130; --muted:#5b6577;
+    --blue:#0a5fc4; --green:#12864a; --yellow:#8a6400; --red:#c9302c; --orange:#b4530f;
+    --shadow: 0 1px 3px rgba(20,30,50,.08), 0 6px 20px rgba(20,30,50,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1117; --bg2:#1a1d26; --bg3:#22263a; --border:#2e3348;
+      --text:#e2e6f0; --muted:#8891aa;
+      --blue:#4a9eff; --green:#3ecf8e; --yellow:#f5c842; --red:#f26c6c; --orange:#e07b39;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  /* toggle overrides OS in both directions */
+  :root[data-theme="light"] {
+    --bg:#fbfcfe; --bg2:#f1f4f9; --bg3:#e6ebf2; --border:#d3dae4;
+    --text:#1b2130; --muted:#5b6577;
+    --blue:#0a5fc4; --green:#12864a; --yellow:#8a6400; --red:#c9302c; --orange:#b4530f;
+    --shadow: 0 1px 3px rgba(20,30,50,.08), 0 6px 20px rgba(20,30,50,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg:#0f1117; --bg2:#1a1d26; --bg3:#22263a; --border:#2e3348;
+    --text:#e2e6f0; --muted:#8891aa;
+    --blue:#4a9eff; --green:#3ecf8e; --yellow:#f5c842; --red:#f26c6c; --orange:#e07b39;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 26px rgba(0,0,0,.35);
+  }
+
+  /* ── Reading rhythm ───────────────────────────────────────────────────────
+     Change THESE, never the rules that consume them.
+
+     THE DEFAULT IS EDITORIAL, NOT WCAG-AAA. That is deliberate, and it is a
+     correction of an earlier reading of the standard.
+
+     WCAG 2.1 SC 1.4.8 says "a mechanism is available to achieve" line spacing
+     >= 1.5 and paragraph spacing >= 1.5x the line spacing. It does NOT ask for
+     that to be the default presentation. This skill previously shipped those
+     numbers as the default, which put 49px between two consecutive sentences at
+     18px type -- about 272% of the body size -- and the result read as an empty
+     page rather than a calm one.
+
+     There is now ONE setting and no reader control -- see the rhythm note in
+     layout.md for the four measured sites it is calibrated against and for the
+     WCAG cost of dropping the control. The values follow Butterick, adjusted
+     upward for a long measure per Bringhurst:
+
+       paragraph space   50-100% of the body size
+       line spacing      120-145% of the body size
+       line length       45-90 characters
+
+     https://practicaltypography.com/space-between-paragraphs.html
+     https://www.w3.org/WAI/WCAG21/Understanding/visual-presentation.html
+
+     Verify with scripts/check_typography.py, which checks the default against
+     these ranges, plus Bringhurst's coupling once the measure passes 95
+     characters. */
+  :root {
+    --leading: 1.72;     /* line-height, unitless so it inherits down correctly.
+
+                            1.72, not 1.62, BECAUSE the measure below is long.
+                            Bringhurst's coupling: leading rises with the measure,
+                            or the eye cannot find the start of the next line. At
+                            125 characters 1.62 is under-led. */
+    --para-gap: 1.50;    /* SPACE BETWEEN PARAGRAPHS, as a multiple of the BODY SIZE.
+
+                            THE NUMBER THAT MATTERS IS NOT THIS ONE. It is the ratio
+                            of this gap to the INTER-LINE white space (line-height
+                            minus font size), because that is what decides whether a
+                            paragraph break LOOKS bigger than a line break:
+
+                              gap / inter-line   verdict
+                              2.29               the July catalogue report, comfortable
+                              2.08               this default
+                              1.85               the printed version of this report
+                              1.78               the lesson page, comfortable
+                              1.64               an earlier default, "packed together"
+
+                            Butterick's 50-100%-of-body rule is a PRINT rule and it
+                            assumes leading of 120-145%. At web leading of 158-162% the
+                            inter-line space is larger, so the same gap stops reading as
+                            a break. Taking his number without his leading is what
+                            produced the packed page. Keep gap / inter-line >= 1.7.
+
+                            Raising --leading therefore REQUIRES raising this too, or the
+                            paragraph break shrinks relative to the line break. Measured:
+                            leading 1.58 -> 1.70 alone drops the ratio from 1.64 to 1.36. */
+    --measure: 50rem;    /* THE ONE WIDTH. Everything uses it -- prose, tables,
+                            figures, notes. About 123 rendered characters on the
+                            face this resolves to here -- which brackets the
+                            printed version's 121 -- and it deliberately leaves
+                            headroom, because a narrower face on another platform
+                            fits MORE characters in the same pixels.
+
+                            DELIBERATELY WIDER THAN THE 45-90 GUIDELINE, and the
+                            argument is measurement, not preference. The two
+                            documents this house style is calibrated against both
+                            run past it and were both judged comfortable:
+
+                              this report, printed on A4    121 characters
+                              a 76-entry catalogue report   138 characters
+
+                            The guideline assumes leading of 120-145%. At 125
+                            characters the coupling above (leading 1.72, paragraph
+                            gap 2.08x the inter-line white) is what makes it read.
+                            Narrow this and you must lower those two with it.
+
+                            It is also ~49% of a 1920px window, which is what the
+                            two liked documents occupy. At 33rem the column was 31%
+                            and the complaint was that it "sits in the middle with
+                            half the page empty".
+
+                            In `rem`, deliberately, and paired with the fluid root below:
+                            root and column scale together, so a wide monitor gets BIGGER
+                            TYPE in a WIDER COLUMN while characters-per-line stays put.
+
+                            `ch` is not an option: it is the width of the digit zero IN
+                            THE ELEMENT THAT USES IT, so 96ch on a table set at .88rem
+                            resolves 106px narrower than the same token on body text.
+                            rem is stable wherever it is used.
+
+                            Do not widen this to fill a big screen. That is what the
+                            margin column in layout.md is for -- extra width should carry
+                            information, not more characters per line. */
+
+    /* ── Type stacks ──────────────────────────────────────────────────────
+       A serif body is the single strongest signal that a page is an article
+       someone wrote rather than a dashboard something generated. It is the
+       default for authored documents; `font: sans` in the frontmatter switches
+       the whole document, and generated dashboards should use it. */
+    /* AUDITED, not guessed. The previous stack was
+         Palatino, "Palatino Linotype", "Book Antiqua", "Iowan Old Style", Charter, Georgia, ...
+       and NOT ONE of those families exists on a stock Linux box -- every report
+       the author opened had been falling through to the generic `serif` keyword.
+       Measured on the machine this skill is developed on: zero hits.
+
+       Ordered so each platform lands on a screen-designed face with LINING
+       figures, which a report full of tables needs:
+         macOS    -> Charter (Carter, tuned for low resolution)
+         Linux    -> Bitstream Charter, else Noto Serif
+         Windows  -> Cambria (screen-designed, lining figures)
+       Georgia is LAST on purpose: it is screen-designed but its default figures
+       are old-style, so `1` and `4` sit at different heights inside a column of
+       numbers. Liberation Serif is named rather than left to the generic, so the
+       fallback is a decision instead of an accident.
+
+       The rendered face therefore differs by platform, and so does the character
+       count in the same pixels -- measured 99 to 127 characters in a 938px column
+       across the faces installed here. That is why the gates measure RENDERED
+       characters on whatever machine runs them, and why --measure below leaves
+       headroom rather than sitting on the cap. */
+    --font-body: Charter, "Bitstream Charter", "Iowan Old Style",
+                 "Source Serif 4", "Noto Serif", Cambria,
+                 "Palatino Linotype", Palatino, "Book Antiqua",
+                 "Liberation Serif", Georgia, serif;
+    --font-display: var(--font-body);
+    --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    --head-weight: 600;   /* a serif carries a heading at 600; a sans needs 650 */
+  }
+  :root[data-font="sans"] {
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: var(--font-body);
+    --leading: 1.70;
+    --head-weight: 650;
+    /* THE MEASURE IS PER FONT, NOT PER DOCUMENT. Palatino's glyphs are narrower
+       than system-ui's, so the same column renders more characters in the serif
+       than in the sans. Setting one width for both puts them at different line
+       lengths -- measured a 15-character spread.
+       Always verify in RENDERED characters (scripts/check_typography.py). */
+    --measure: 56rem;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* FLUID ROOT. This is the knob for "make it bigger and easier to read" -- never
+     --measure. Every width in this skill is rem, so raising the root scales the text
+     and the column together and line length does not move.
+
+     ~15px at 375px wide, ~16.8px at 1280, ~18px at 1920 and above. Written as
+     `rem + vw` rather than pure `vw` so a reader who has set a larger default font
+     size still gets it; pure vw would silently override their preference.
+
+     Print pins 16px below -- paper has a fixed width, so a fluid root would only
+     reflow the layout and cost pages. */
+  html { scroll-behavior: smooth; font-size: clamp(0.94rem, 0.19vw + 0.9rem, 1.13rem); }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 1rem; line-height: var(--leading);
+    color: var(--text); background: var(--bg);
+    margin: 0; padding: 2.5rem 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NO RULE UNDER A HEADING. A border-bottom on every h2 is the GitHub-README
+     tell: it turns an essay into a reference page, and it is the second most
+     recognisable "this was generated" signal after the coloured card rail.
+     A heading is separated by SPACE and SIZE. The only rule on the page is the
+     one under a table header row, where it carries structure. */
+  h1 { font-family: var(--font-display); font-size: 2.15em; line-height: 1.14;
+       font-weight: var(--head-weight); letter-spacing: -.012em;
+       text-wrap: balance; margin: 0 0 .35em; }
+  h2 { font-family: var(--font-display); font-size: 1.42em; line-height: 1.25;
+       font-weight: var(--head-weight); letter-spacing: -.006em;
+       text-wrap: balance; margin-bottom: .5em; }
+  /* 1.16em, not 1.08em. A system serif ships 400 and 700 and nothing between,
+     so `--head-weight: 600` resolves to 700 and h1/h2/h3 all render at the same
+     weight -- the whole hierarchy has to come from size. At 1.08em an h3 sat 1.4px
+     above body text at a 15px root and read as a bold sentence, not a heading. */
+  h3 { font-family: var(--font-display); font-size: 1.16em; font-weight: 600;
+       margin-bottom: .35em; }
+
+  /* Prose FILLS the reading column -- it does not sit narrow inside a wider one.
+     The column is a grid track (layout.md), so no element needs its own max-width
+     and there is nothing left for two competing caps to fight over. */
+
+  /* A paragraph that opens with a bolded label is a titled step, not a sentence.
+     Promoting the label to its own line turns a wall of prose into scannable
+     landmarks without changing a single word. Pure presentation. */
+  /* Keyed on a class, NOT on `strong:first-child`. `:first-child` ignores text
+     nodes, so ANY paragraph whose first ELEMENT is a <strong> matched -- including
+     "...links in **both** palettes", which then broke across three lines with the
+     bolded word alone on the middle one. md_to_html.py sets .step when the strong
+     really is the first thing in the paragraph. */
+  p.step > strong:first-child { display: block; margin-bottom: .1em; }
+  .kv p.step > strong, td p.step > strong,
+  .sidenote p.step > strong { display: inline; }
+
+  /* --para-gap is a multiple of the BODY SIZE (Butterick), not of a line. */
+  p  { margin: 0 0 calc(var(--para-gap) * 1em); }
+  ul, ol { margin: 0 0 calc(var(--para-gap) * 1em); padding-left: 1.4em; }
+  li + li { margin-top: .3em; }
+  a  { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  /* A link wrapping a code span must still read as a link; `code` colours
+     itself green and would otherwise win. */
+  a code { color: var(--blue); }
+  /* A code span is quieter than it was: no ring, no green. A bordered green pill
+     in the middle of a sentence reads as a UI chip, not as an identifier. */
+  code {
+    background: var(--bg2); color: var(--text);
+    border-radius: 3px; padding: .1em .32em; font-size: .85em;
+    font-family: var(--font-mono);
+  }
+  pre { background: var(--bg2); border-left: 3px solid var(--border);
+        padding: .9em 1.1em; overflow-x: auto; line-height: 1.5;
+        font-family: var(--font-mono); }
+  pre code { background: none; border: none; padding: 0; font-size: .85em; color: var(--text); }
+
+  /* Images must never exceed their figure. The theme's ONLY img cap used to live inside
+     @media print, so on screen a 1347px screenshot rendered at natural size and burst
+     ~530px out of its 848px figure. */
+  img { max-width: 100%; height: auto; display: block; }
+  figure { margin: 0; }
+  /* A caption explains the picture; it is not body copy. Smaller and muted so the eye
+     reads the image, then the caption, then returns to the prose. */
+  figcaption {
+    font-size: .82rem; line-height: 1.5; color: var(--muted); margin-top: .6rem;
+  }
+  /* Horizontal rules only. A filled header cell in the accent colour is a
+     dashboard table; a rule under the header row is an editorial one, and it
+     is the treatment every printed table has used for a century. */
+  /* lining-nums as well as tabular-nums: if the resolved face defaults to
+     old-style figures (Georgia does), a column of numbers sits at three
+     different heights. Faces without a lining set ignore it harmlessly. */
+  table { border-collapse: collapse; width: 100%; font-size: .9em;
+          font-variant-numeric: lining-nums tabular-nums; }
+  th { padding: .4em .7em .4em 0; text-align: left; font-weight: 600;
+       border-bottom: 2px solid var(--text); vertical-align: bottom; }
+  td { padding: .4em .7em .4em 0; border-bottom: 1px solid var(--border);
+       vertical-align: top; }
+  th:last-child, td:last-child { padding-right: 0; }
+  blockquote { margin: 1.4em 0; padding: .1em 0 .1em 1.2em;
+               border-left: 3px solid var(--border); color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--border); margin: var(--gap-block, 1.5rem) 0; }
+  strong { color: var(--text); font-weight: 650; }
+  .muted { color: var(--muted); }
+
+  /* print: ink-on-white, full width, figures kept whole (interactive chrome hidden in
+     interactivity.md). Long tables and <pre> are deliberately NOT in the avoid list --
+     blanket break-inside rules are what leave printed pages half empty. Full print
+     hardening (table wrapping, orphans/widows) is in references/pdf-export.md. */
+  @media print {
+    :root, :root[data-theme="dark"], :root[data-theme="light"] {
+      --bg:#fff; --bg2:#fff; --bg3:#f2f2f2; --border:#c9c9c9; --text:#000; --muted:#444;
+    }
+    /* On paper the page IS the measure: fixed width, no scrolling, and a narrow
+       column would only waste the sheet. */
+    :root { --measure: none; }
+    html { font-size: 16px; }
+    body { padding: 0; font-size: 11pt; }
+    a { color:#000; text-decoration: underline; }
+    h1, h2, h3 { break-after: avoid; }
+    svg, figure, img, .card, .callout, .stat-box { break-inside: avoid; }
+    tr { break-inside: avoid; }
+    p, li { orphans: 3; widows: 3; }
+  }

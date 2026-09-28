@@ -1,0 +1,65 @@
+  /* A4, not Chrome's letter default. Letter is 18mm shorter and 6mm wider, so
+     an A4 printer either shrinks every page or clips the bottom edge — the
+     quiet way clipped content comes back. @page lives outside @media print
+     because it only ever applies to paged output anyway. */
+  @page { size: A4; margin: 14mm 12mm; }
+
+  @media print {
+    /* Ink on white, whatever the on-screen theme is. A forced-dark report
+       would otherwise print dark-on-dark or burn a page of toner. */
+    :root, :root[data-theme="dark"], :root[data-theme="light"] {
+      --bg:#fff; --bg2:#fff; --bg3:#f2f2f2; --border:#c9c9c9; --text:#000; --muted:#444;
+    }
+    body { max-width: none; padding: 0; font-size: 11pt; }
+    a { color:#000; text-decoration: underline; }
+
+    /* Interactive chrome has no meaning on paper. This is the last style block,
+       so it is also the backstop: if a widget is added and its print rule is
+       forgotten, it ships into the client PDF. */
+    [data-theme-toggle], .filter-input, .copy-btn,
+    .reader-bar, .facets, a.hanchor, .xref-pop,
+    .toc-backdrop, .read-progress { display: none !important; }
+    /* `.toc` is NOT in that list. It is a drawer on screen and a CONTENTS BLOCK
+       on paper, and this is the last style block in the document -- listing it
+       here with !important silently dropped the contents page from every PDF. */
+    .report-grid { display: block !important; }
+    /* Nothing may stay hidden. A faceted-out finding, a collapsed drawer and a
+       filtered-out row are all screen state -- on paper the document is complete. */
+    [data-facet][hidden] { display: block !important; }
+    details, details.section, details.evidence { display: block !important; }
+    details > *:not(summary) { display: block !important; }
+    /* The reading rails do not exist on paper; a sidenote prints as an aside. */
+    .sidenote, .report-grid > aside {
+      break-inside: avoid; background:#f7f7f7; border-left: 3px solid #c9c9c9;
+      padding: .5em .9em; margin: .8rem 0; font-size: .9em;
+    }
+
+    /* Tables. A table wider than the page silently loses its right-hand
+       columns off the paper edge — `overflow-x: auto` is a screen-only fix
+       and scrolls nothing in print. Fix the layout and let cells wrap. */
+    table { table-layout: fixed; width: 100%; }
+    th, td { overflow-wrap: anywhere; word-break: normal; hyphens: auto; vertical-align: top; }
+
+    /* Code blocks. Wrapping beats clipping — a clipped line loses characters
+       with no sign it happened — but a wrapped line restarts at column 0 and
+       destroys the alignment of an ASCII diagram. So shrink the type until a
+       normal line fits (~98 monospace chars across A4 at 8.5pt, against 89 at
+       the screen size) and keep the wrap only as a last resort for the rare
+       over-long line. Keep diagram lines under ~95 chars and none of this
+       applies. */
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    pre, pre code { font-size: 8.5pt; line-height: 1.35; }
+
+    /* Keep whole figures together — but let long tables and code blocks
+       break across pages. A blanket `break-inside: avoid` on tables and <pre>
+       is what leaves a third of the pages half empty. */
+    svg, figure, img, .card, .stat-box, .callout,
+    .keyfacts, .compare, .compare-foot, .finding { break-inside: avoid; }
+    .compare { page-break-inside: avoid; }
+    table, pre { break-inside: auto; }
+    thead { display: table-header-group; }   /* repeat the header on each page */
+    tr { break-inside: avoid; }
+
+    h1, h2, h3 { break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+  }

@@ -1,0 +1,170 @@
+  /* ── Layout ───────────────────────────────────────────────────────────────
+     ONE COLUMN. ONE WIDTH. Everything in the document shares the same left edge
+     and the same right edge -- prose, tables, figures, callouts, margin notes.
+
+     This is the print layout, on screen, and it is a deliberate reversal of an
+     earlier three-zone design. What that design produced, measured on one report
+     at 1920px:
+
+       printed        1 band,  everything 751-1453,        column 100% of the sheet
+       on screen      7 bands, prose 655-1250, notes to 1900, column 31% of the window
+
+     Two complaints followed, and both came from the same cause. "It sits in the
+     middle with half the page empty" -- 34% dead on each side. "Every block is a
+     different length, unlike print where everything is aligned" -- prose ended at
+     1113, figures at 1275, tables at 1402: three right edges on one page.
+
+     A single width answers both. There is no left rail (site navigation, which a
+     one-file report does not have) and no right rail (which was the second and
+     third right edge). The contents block sits in the flow at the top. */
+
+  :root {
+    --gutter: 2rem;     /* between the column and anything beside it */
+    --pad:    1.25rem;  /* minimum air at the viewport edge */
+
+    /* Structural rhythm -- the space AROUND blocks and BEFORE headings. Scaled
+       by --rhythm. Separate from --para-gap, which is the space BETWEEN
+       paragraphs inside one block and lives in the theme. */
+    --rhythm: 1;
+    --gap-block:   calc(1.15rem * var(--rhythm));
+    --gap-section: calc(2.5rem * var(--rhythm));
+  }
+
+  /* The grid supplies the centred column, so the body's own cap must go.
+     Two competing caps silently squeeze the measure. */
+  body:has(.report-grid) { max-width: none; padding-left: 0; padding-right: 0; }
+
+  .report-grid {
+    display: grid;
+    align-items: start;
+    grid-template-columns:
+      [bleed-start] minmax(var(--pad), 1fr)
+      [side-start text-start note-start]
+        min(var(--measure), 100% - 2 * var(--pad))
+      [side-end text-end note-end note-mid]
+      minmax(var(--pad), 1fr) [bleed-end];
+  }
+
+  /* Direct children only. The grid IS the <main> -- it carries the landmark
+     itself rather than sitting inside one, because an extra level would make the
+     whole document a single grid item and every block-spacing rule below would
+     stop resolving. Be the wrapper; do not add one. */
+  .report-grid > * { grid-column: text; min-width: 0; }
+
+  /* `.wide`, `.full` and `.bleed` are KEPT AS ALIASES of the single width, not
+     removed. Reports already carry them, and silently widening one block again
+     is the defect this layout exists to prevent. A table too wide for the
+     column scrolls inside its own container -- exactly what print does, where
+     it wraps instead. */
+  .report-grid > .wide,
+  .report-grid > .full,
+  .report-grid > .bleed { grid-column: text; }
+
+  /* The contents element is OUT OF FLOW -- a drawer on screen, a block in print
+     -- and interactivity.md owns it completely. Declaring it here too would win
+     on specificity (`.report-grid > .toc` beats `.toc`) and break the drawer. */
+
+  /* A block sets rhythm through the tokens, never a hand-picked pixel value. */
+  .report-grid > h2 { margin-top: var(--gap-section); }
+  .report-grid > h3 { margin-top: calc(var(--gap-block) * 1.15); }
+  .report-grid > .stat-grid, .report-grid > .keyfacts, .report-grid > figure,
+  .report-grid > .callout, .report-grid > .card, .report-grid > table,
+  .report-grid > pre, .report-grid > .compare, .report-grid > details.section,
+  .report-grid > details.evidence, .report-grid > .compare-foot,
+  .report-grid > .facets, .report-grid > .sidenote, .report-grid > aside {
+    margin-top: var(--gap-block); margin-bottom: var(--gap-block);
+  }
+  /* A heading owns the block under it -- kill the doubled gap. */
+  .report-grid > h2 + *, .report-grid > h3 + * { margin-top: 0; }
+  /* A rule and a section heading are the SAME landmark. Left to compound they
+     stack --gap-block plus --gap-section and open ~120px of nothing. */
+  .report-grid > hr + h2 { margin-top: var(--gap-block); }
+  /* The contents drawer is fixed and sits right after the header in the DOM; a margin here pushed the
+     drawer 20px down from the window top. Skip it and space the first real block instead. */
+  .report-grid > header + :not(.toc),
+  .report-grid > header + .toc + * { margin-top: var(--gap-block); }
+  /* The reader bar is fixed (interactivity.md), so it takes no row -- but the
+     column needs clearance or the kicker renders under it on a narrow screen. */
+  .report-grid { padding-top: 2.2rem; }
+  /* A compare strip and its foot are one object. */
+  .report-grid > .compare:has(+ .compare-foot) { margin-bottom: 0; }
+  .report-grid > .facets + .finding { margin-top: 0; }
+  /* Do NOT zero the last child's margin inside a wrapper. It looks like it
+     prevents a double gap; what it does is set the space after that paragraph to
+     0px, so it and the next one read as one block. */
+
+  /* ── Margin notes ─────────────────────────────────────────────────────────
+     An aside in the flow, at the column width, exactly as it prints. It used to
+     float into a right rail; that rail was the second right edge on the page and
+     the reason blocks looked unaligned. Same markup either way. */
+  .sidenote, .report-grid > aside {
+    font-size: .88em; line-height: 1.5; color: var(--muted);
+    border-left: 3px solid var(--border); padding: .5em 0 .5em 1em;
+  }
+  .sidenote > :first-child { margin-top: 0; }
+  .sidenote > :last-child  { margin-bottom: 0; }
+  .sidenote .sn-label {
+    display: block; font-family: var(--font-mono); font-size: .78em; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: .3em;
+  }
+
+  /* ── layout: wide — CATALOGUE MODE ────────────────────────────────────────
+     Same single column, wider and set smaller. This is the treatment a REFERENCE
+     LIST wants and the treatment an ARGUMENT does not. Measured on two documents
+     the reader liked, they were different genres rather than different tastes:
+
+                          text runs   median run   runs fitting ONE line
+       catalogue report        205       77 chars           95%
+       prose report             59      143 chars            8%
+
+     At 95% single-line nothing wraps, so the eye never makes a return sweep and a
+     150-character column costs nothing. At 8% it is prose. `check_typography.py`
+     enforces exactly that: in wide mode it requires that most runs really do fit
+     on one line, so picking the wrong mode fails the gate rather than shipping. */
+  :root[data-layout="wide"] {
+    /* Catalogue scale: ~14.5px at 375, ~15.7px at 1920. The report this was
+       measured from ran 15px against a 930px column. */
+    font-size: clamp(0.90rem, 0.08vw + 0.885rem, 0.98rem);
+    --measure: 62rem;
+    --gap-block:   calc(1.0rem * var(--rhythm));
+    --gap-section: calc(2.2rem * var(--rhythm));
+  }
+
+  /* ── Rhythm is ONE setting, not a control ────────────────────────────────
+     There was a compact / normal / relaxed toggle. It is gone, and the single
+     value is the one the theme sets: leading 1.72, paragraph gap 1.50em, which
+     puts gap / inter-line at 2.08. Four real long-form sites, measured at 1920px:
+
+       site                     face      px  leading  gap(em)  gap/inter  chars
+       Anthropic engineering    serif     17    1.55     0.94      1.71      78
+       Stripe blog              sohne     18    1.30     1.33      4.44     105
+       MDN                      Inter     16    1.75     1.00      1.33     110
+       Wikipedia                sans      16    1.63     1.00      1.60     135
+       -- this skill --         Palatino  18    1.72     1.50      2.08     126
+
+     The ratio, which is the number that matters, sits mid-range. Wikipedia is
+     within a few pixels of this geometry at the same column width.
+
+     COST, stated plainly: WCAG 2.1 SC 1.4.8 (AAA) asks that "a mechanism is
+     available" to reach line spacing >= 1.5 and paragraph spacing >= 1.5x the
+     line spacing. The `relaxed` step WAS that mechanism. Without it the document
+     relies on the user agent -- browser zoom, reader mode, a user stylesheet --
+     which is where the standard itself puts the primary responsibility. The
+     default already meets the LINE-spacing half (1.72 >= 1.5); it is the
+     paragraph half (needs 2.58em, ships 1.50em) that is now unmet. If a client
+     ever requires AAA, put the control back rather than inflating the default:
+     inflating it is what made the page read as empty. */
+
+  /* ── Paper ────────────────────────────────────────────────────────────────
+     The screen layout already IS the paper layout, so print only has to drop the
+     chrome and let the sheet set the width. */
+  @media print {
+    .report-grid { display: block; padding-top: 0; }
+    /* The contents element is NOT hidden here. On paper it becomes a contents
+       block -- interactivity.md owns that rule, and `.report-grid > .toc` would
+       out-specify it and silently drop the contents from every PDF. */
+    .sidenote, .report-grid > aside {
+      break-inside: avoid; background: #f7f7f7; padding: .5em .9em;
+    }
+  }

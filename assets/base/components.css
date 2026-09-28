@@ -1,0 +1,179 @@
+  /* Paragraph rhythm inside a compact component. --para-gap is tuned for a
+     column of running prose; carried into a card or a callout unchanged it
+     opens a 49px hole between two short sentences and the box reads as broken.
+     Overriding the TOKEN rather than the rule keeps one lever. */
+  .card, .callout, .finding, .compare > div, .evidence, .sidenote, .stat-box,
+  .compare-foot, td, th { --para-gap: .55; }   /* multiples of the body size */
+
+  /* Small labels carry a PIXEL FLOOR, not just a rem value. Every size here is
+     rem, and the root shrinks on a phone -- so the labels got smallest exactly
+     where they needed to be biggest. Measured at a 390px viewport before this:
+     the stat label rendered 10.3px, the kicker 10.6px, the reader-bar buttons
+     10.6px. `max(11.5px, …)` keeps the desktop size and stops the phone one. */
+
+  /* ── Header typography ──────────────────────────────────────────────────── */
+  /* An eyebrow is a locator, not a banner: mono, small, tracked, muted. In the
+     accent colour at 600 weight it competed with the h1 underneath it. */
+  .kicker { font-family: var(--font-mono); font-size: max(11.5px, .7rem); font-weight: 400;
+            letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+            margin: 0 0 .7em; }
+  /* The standfirst is the one place italic earns its keep: it marks the sentence
+     as the author speaking about the document rather than in it. */
+  .dek    { font-size: 1.1em; line-height: 1.45; color: var(--muted); font-style: italic;
+            text-wrap: pretty; margin: 0 0 .7em; }
+  .byline { font-family: var(--font-mono); font-size: max(11.5px, .72rem); letter-spacing: .04em;
+            color: var(--muted); margin: 0; }
+
+  /* ── Stat grid — 2 to 4 headline numbers ────────────────────────────────
+     Explicit column count, NOT auto-fit. auto-fit with minmax reflows to
+     whatever fits, so four boxes land 3+1 and the orphan reads as a mistake.
+     Set --stat-cols to the number you actually have. */
+  /* No card per figure. A rounded box with a border around every number is the
+     dashboard tell; a rule above a column of figures is how a printed table of
+     results has always looked, and it costs a third of the vertical space. */
+  /* A ROW gap as well as a column gap. It was `gap: 0 1.6rem`, which was
+     invisible while boxes never wrapped -- and then four boxes at two columns
+     put the second row's numbers hard against the first row's labels. */
+  .stat-grid { display: grid; grid-template-columns: repeat(var(--stat-cols, 3), minmax(0, 1fr));
+               gap: 1.1rem 1.6rem; border-top: 2px solid var(--text); }
+  .stat-box  { padding: .7rem 0 .1rem; }
+  .stat-box .num   { font-size: 1.75em; font-weight: 600; line-height: 1.05; color: var(--text);
+                     font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .stat-box .label { color: var(--muted); font-family: var(--font-mono); font-size: max(11.5px, .68rem);
+                     margin-top: .3rem; line-height: 1.4;
+                     text-transform: uppercase; letter-spacing: .06em; }
+  .stat-box .note  { color: var(--muted); font-size: .82em; margin-top: .4rem; line-height: 1.45; }
+  /* Sensible counts without being told. Four across fits now that the column is
+     one width -- it was 2x2 when the reading column was 596px, and that left the
+     figures cramped in half the available room. An explicit --stat-cols wins. */
+  .stat-grid:has(> :nth-child(2):last-child) { --stat-cols: 2; }
+  .stat-grid:has(> :nth-child(4):last-child) { --stat-cols: 4; }
+  .stat-grid:has(> :nth-child(5):last-child) { --stat-cols: 3; }
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* An odd count would leave the last box alone on its row. Let it span the
+       width instead -- a deliberate wide box reads as emphasis, an orphan reads
+       as a bug. */
+    .stat-grid > :nth-child(odd):last-child { grid-column: 1 / -1; }
+  }
+
+  /* ── Key facts — the dense alternative. Numbers you need but should not shout.
+     Ruled and tabular. Twelve of these cost the vertical space of two stat boxes. */
+  .keyfacts { display: grid; grid-template-columns: repeat(var(--fact-cols, 3), minmax(0, 1fr));
+              gap: 0 1.6rem; border-top: 1px solid var(--border);
+              border-bottom: 1px solid var(--border); padding: .15rem 0; }
+  .keyfacts > div { display: flex; justify-content: space-between; align-items: baseline;
+                    gap: .8rem; padding: .38rem 0; }
+  .keyfacts .k { color: var(--muted); font-family: var(--font-mono);
+                 font-size: max(11.5px, .7rem); letter-spacing: .04em; text-transform: uppercase; }
+  .keyfacts .v { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .9rem;
+                 white-space: nowrap; }
+  @media (max-width: 760px) { .keyfacts { grid-template-columns: 1fr; } }
+
+  /* ── Inline data chip — a number inside a sentence, still scannable ─────── */
+  .chip { display: inline-flex; align-items: baseline; gap: .3em; padding: .05em .45em;
+          border: 1px solid var(--border); border-radius: 4px; background: var(--bg2);
+          font-size: .88em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chip .cl { color: var(--muted); font-size: .82em; }
+
+  /* ── Delta — a signed number that reads as a direction, not just a digit.
+     Arrow AND colour, so it survives greyscale print and colour-blind readers. */
+  .delta { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .delta.up   { color: var(--green); }
+  .delta.down { color: var(--red); }
+  .delta.flat { color: var(--muted); }
+  .delta::before { font-weight: 400; margin-right: .15em; }
+  .delta.up::before   { content: "▲"; font-size: .72em; }
+  .delta.down::before { content: "▼"; font-size: .72em; }
+  .delta.flat::before { content: "–"; }
+
+  /* ── Compare — two things measured the same way, side by side, with the
+     difference stated rather than left for the reader to subtract. */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+             border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .compare > div { padding: .9rem 1.1rem; }
+  .compare > div + div { border-left: 1px solid var(--border); }
+  .compare .side { font-family: var(--font-mono); font-size: max(11.5px, .68rem); text-transform: uppercase;
+                   letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
+  .compare .win { background: color-mix(in srgb, var(--green) 7%, var(--bg2)); }
+  .compare > :first-child > :last-child, .compare > :last-child > :last-child { margin-bottom: 0; }
+  /* The foot is the same object as the strip above it -- it must sit flush,
+     or the difference reads as an unrelated note. */
+  .compare:has(+ .compare-foot) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .compare-foot { border: 1px solid var(--border); border-top: none;
+                  border-radius: 0 0 4px 4px; background: var(--bg2);
+                  padding: .55rem 1.1rem; font-size: .85rem; margin-top: 0 !important; }
+  @media (max-width: 640px) { .compare { grid-template-columns: 1fr; }
+                              .compare > div + div { border-left: none; border-top: 1px solid var(--border); } }
+
+  /* ── Sparkline — a trend beside its label, not a chart page ─────────────── */
+  .spark { display: inline-block; vertical-align: -.15em; }
+  .spark path { fill: none; stroke: var(--blue); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .spark .area { fill: color-mix(in srgb, var(--blue) 14%, transparent); stroke: none; }
+  .spark .last { fill: var(--blue); }
+
+  /* ── Callouts: thin FULL border + faint severity tint — no one-sided accent bar
+     (color-mix falls back to bg2 on old engines) */
+  /* A tinted ground OR a coloured border -- not both. Two signals for one state
+     is what made a page of callouts read as a warning system rather than a
+     document. The ground carries it; the border stays hairline. */
+  .callout       { border: 1px solid var(--border); background: var(--bg2);
+                   padding: .75em 1em; border-radius: 4px; }
+  .callout.ok    { background: color-mix(in srgb, var(--green)  7%, var(--bg2)); }
+  .callout.warn  { background: color-mix(in srgb, var(--yellow) 10%, var(--bg2)); }
+  .callout.alert { background: color-mix(in srgb, var(--red)    7%, var(--bg2)); }
+  .callout.info  { background: color-mix(in srgb, var(--blue)   7%, var(--bg2)); }
+  .callout > :first-child { margin-top: 0; }
+  .callout > :last-child  { margin-bottom: 0; }
+
+  /* badge: hairline ring, NO tinted fill. A 14% tint of the semantic colour was tried and
+     measured 3.3-3.8:1 in the light theme (AA needs 4.5:1 at this size) — tinting the surface
+     toward the text colour eats the contrast. Colour-code with the ring, not the fill.
+     white-space: nowrap is required, or a two-word label breaks inside the pill. */
+  .badge        { display: inline-block; white-space: nowrap; padding: .12em .55em; border-radius: 999px;
+                  font-size: max(11.5px, .72rem); font-weight: 600; border: 1px solid var(--border); }
+  .badge-green  { color: var(--green);  border-color: var(--green);  }
+  .badge-yellow { color: var(--yellow); border-color: var(--yellow); }
+  .badge-red    { color: var(--red);    border-color: var(--red);    }
+  .badge-blue   { color: var(--blue);   border-color: var(--blue);   }
+
+  /* findings list — many severity items in a row. Neutral surface; severity carried by a
+     single left rule plus the badge. Deliberately quieter than .callout: a full coloured
+     border is right for ONE interruption and exhausting for a list of seven.
+     Use .callout to interrupt, .finding to enumerate. */
+  .finding        { border: 1px solid var(--border); border-left: 3px solid var(--border);
+                    background: var(--bg2); border-radius: 4px; padding: .8em 1.1em; margin: .7rem 0; }
+  .finding.high   { border-left-color: var(--red);    }
+  .finding.medium { border-left-color: var(--yellow); }
+  .finding.low    { border-left-color: var(--green);  }
+  .finding.info   { border-left-color: var(--blue);   }
+  .finding > :first-child { margin-top: 0; }
+  .finding > :last-child  { margin-bottom: 0; }
+
+  .card   { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: .9rem 1.1rem; }
+  .card > :first-child { margin-top: 0; }
+  .card > :last-child  { margin-bottom: 0; }
+  .kv     { display: grid; grid-template-columns: minmax(0, 10rem) 1fr; gap: .35rem .8rem;
+            font-size: .88rem; align-items: baseline; }
+  .kv .k  { color: var(--muted); }
+  .kv > span:not(.k) { font-variant-numeric: tabular-nums; }
+
+  /* ── Evidence drawer — the raw log, query or table behind a claim.
+     Closed on screen so the argument stays readable; forced open on paper by
+     the toolkit's print rules, so nothing is lost in the PDF. */
+  .evidence { border: 1px dashed var(--border); border-radius: 4px; background: transparent; }
+  .evidence > summary { cursor: pointer; padding: .45em .9em; font-size: .82em; color: var(--muted);
+                        list-style: none; display: flex; align-items: center; gap: .5em; }
+  .evidence > summary::-webkit-details-marker { display: none; }
+  .evidence > summary::before { content: "▸"; transition: transform .15s; }
+  .evidence[open] > summary::before { transform: rotate(90deg); }
+  .evidence > summary:hover { color: var(--text); }
+  .evidence > *:not(summary) { padding: 0 .9em .9em; }
+
+  @media print {
+    .keyfacts, .compare, .stat-grid { break-inside: avoid; }
+    .evidence { border-style: solid; }
+    .evidence > summary { font-weight: 600; color: #000; }
+    .evidence > summary::before { content: "" !important; }   /* the arrow means nothing on paper */
+    .chip, .badge { border-color: #999; }
+  }
