@@ -4,10 +4,11 @@ Reads the report's beat and tour data, copies media into the project, writes
 data.js (the timeline data the composition consumes), stamps the root duration
 and the <audio> clips into index.html, and writes the WebVTT captions.
 
-Usage: python3 build.py [--src ..] [--beats beats.timed.json] [--vtt teaser.vtt]
-  src   = folder holding voice/ and shots/ (default: the parent folder)
-  beats = the beat file with a `scene` object per beat (default: the one next to this script)
-  vtt   = caption file name, written into src
+Usage: python3 build.py [--src ..] [--beats beats.timed.json] [--vtt teaser.vtt] [--captions keywords|full]
+  src      = folder holding voice/ and shots/ (default: the parent folder)
+  beats    = the beat file with a `scene` object per beat (default: the one next to this script)
+  vtt      = caption file name, written into src (always written, in both caption modes)
+  captions = keywords (default: no sentence text on screen, only scene.labels) or full (burned captions too)
 """
 
 import argparse
@@ -67,6 +68,31 @@ def load_scene(beat, base):
     return scene
 
 
+def check_words(beat, scene, words):
+    """Fail fast on a label or ui word that is not in the caption."""
+    for lab in scene.get("labels", []):
+        w = lab["word"] if isinstance(lab["word"], list) else [lab["word"]]
+        find_word(words, *w)
+    if "click" in scene:
+        find_word(words, scene["click"])
+
+
+def copy_module(scene, base):
+    """A custom scene's module (a plain <file>.js next to the beats file); returns its script path.
+    A module outside this folder is copied into custom/ so the composition can load it."""
+    name = scene.get("module")
+    if not name or Path(name).name != name or not name.endswith(".js"):
+        raise SystemExit(f"custom scene needs module: a plain <file>.js name, got {name!r}")
+    src = (base / name).resolve()
+    if not src.is_file():
+        raise SystemExit(f"custom scene module not found: {src}")
+    if src.parent == HERE:
+        return name
+    (HERE / "custom").mkdir(exist_ok=True)
+    shutil.copy2(src, HERE / "custom" / name)
+    return "custom/" + name
+
+
 def vtt_time(t):
     h, rem = divmod(t, 3600)
     m, s = divmod(rem, 60)
@@ -78,6 +104,7 @@ def main():
     ap.add_argument("--src", default=str(HERE.parent))
     ap.add_argument("--beats", default=str(HERE / "beats.timed.json"))
     ap.add_argument("--vtt", default="teaser.vtt")
+    ap.add_argument("--captions", choices=["keywords", "full"], default="keywords")
     args = ap.parse_args()
     src = Path(args.src)
     beats_path = Path(args.beats)
@@ -88,7 +115,7 @@ def main():
     (HERE / "assets/voice").mkdir(parents=True, exist_ok=True)
     (HERE / "assets/frames").mkdir(parents=True, exist_ok=True)
 
-    out, t = [], 0.0
+    out, t, modules = [], 0.0, []
     for b in beats:
         vstart = t + VOICE_LEAD
         words = [{"w": w["w"], "s": round(vstart + w["s"], 3), "e": round(vstart + w["e"], 3)} for w in b["caption_words"]]
@@ -98,6 +125,11 @@ def main():
             "start": round(t, 3), "vstart": round(vstart, 3), "dur": b["dur"],
             "end": round(t + b["dur"] + GAP, 3), "words": words,
         }
+        check_words(b, beat["scene"], words)
+        if beat["scene"]["type"] == "custom":
+            mod = copy_module(beat["scene"], beats_path.parent)
+            if mod not in modules:
+                modules.append(mod)
         if b["kind"] == "ui":
             s = tour[b["id"]]
             imgs = [s["after"]] + ([s["before"]["img"]] if s.get("before") else [])
@@ -105,11 +137,13 @@ def main():
                 shutil.copy2(src / "shots/frames" / img, HERE / "assets/frames" / img)
             f = beat["scene"]
             fw = find_word(words, f["focus"], f.get("nth", 0)) if "focus" in f else words[len(words) // 3]
-            ui = {"after": "assets/frames/" + s["after"], "box": s["box"], "text": s.get("text", s["box"]), "size": s["size"], "focusAt": fw["s"]}
+            text = f.get("text") or s.get("text", s["box"])  # scene.text overrides the tour's text box (crop on word boundaries)
+            ui = {"after": "assets/frames/" + s["after"], "box": s["box"], "text": text, "size": s["size"], "focusAt": fw["s"]}
             if s.get("before"):
                 ui["before"] = "assets/frames/" + s["before"]["img"]
                 ui["click"] = s["before"]["click"]
-                ui["clickAt"] = words[min(1, len(words) - 1)]["s"]  # press lands on the 2nd caption word
+                # press lands on scene.click, or on the 2nd caption word
+                ui["clickAt"] = find_word(words, f["click"])["s"] if "click" in f else words[min(1, len(words) - 1)]["s"]
             beat["ui"] = ui
         out.append(beat)
         t += b["dur"] + GAP
@@ -124,7 +158,7 @@ def main():
             hide = round(groups[j + 1][0]["s"] - SHOW_LEAD, 3) if j + 1 < len(groups) else round(last_end, 3)
             beat["phrases"].append({"show": show, "hide": hide, "wi": [beat["words"].index(w) for w in g]})
 
-    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "beats": out}
+    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "captions": args.captions, "beats": out}
     (HERE / "data.js").write_text("// generated by build.py; do not edit\nwindow.TEASER = " + json.dumps(data, indent=1) + ";\n")
 
     audio = "\n".join(
@@ -135,6 +169,8 @@ def main():
     html = (HERE / "index.html").read_text()
     html = re.sub(r'(data-composition-id="main"[^>]*?data-duration=")[^"]*"', rf'\g<1>{total}"', html, count=1, flags=re.S)
     html = re.sub(r"(<!-- AUDIO:START -->\n).*?(\s*<!-- AUDIO:END -->)", lambda m: m.group(1) + audio + "\n      <!-- AUDIO:END -->", html, flags=re.S)
+    scripts = "\n".join(f'    <script src="{m}"></script>' for m in modules)
+    html = re.sub(r"(<!-- CUSTOM:START -->\n).*?(\s*<!-- CUSTOM:END -->)", lambda m: m.group(1) + scripts + "\n    <!-- CUSTOM:END -->", html, flags=re.S)
     (HERE / "index.html").write_text(html)
 
     cues = ["WEBVTT", ""]
@@ -142,7 +178,7 @@ def main():
         for p in b["phrases"]:
             cues += [f"{vtt_time(p['show'])} --> {vtt_time(p['hide'])}", " ".join(b["words"][k]["w"] for k in p["wi"]), ""]
     (src / args.vtt).write_text("\n".join(cues))
-    print(f"total {total}s, {sum(len(b['phrases']) for b in out)} phrases")
+    print(f"total {total}s, {sum(len(b['phrases']) for b in out)} phrases, captions {args.captions}, {len(modules)} custom modules")
 
 
 if __name__ == "__main__":

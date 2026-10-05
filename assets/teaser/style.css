@@ -266,3 +266,52 @@ svg.layer {
   width: 100%;
   height: 100%;
 }
+/* hero layer: shared objects that continue across beats draw above every scene */
+.hero-layer {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+.card.job {
+  border-width: 3px;
+}
+/* key-word labels (captions mode "keywords"): 2-5 words beside the object, h2 size so they read at 360 px wide */
+.key-label {
+  font-size: 48px;
+  line-height: 1.167;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: #1d2330;
+}
+/* over a screenshot the label needs its own ground */
+.key-label.tag {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #1d2330;
+  color: #ffffff;
+}
+/* chips with focus: the rest stay quiet */
+.dim-chip {
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  border: 2px solid #d3dae4;
+  border-radius: 16px;
+  color: #5b6577;
+  white-space: nowrap;
+}
+.hero-group,
+.scene-body {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+/* ui label leader: from the highlighted block's edge down to its label in the lane */
+.ui-leader {
+  width: 2px;
+  background: #1d2330;
+  transform-origin: 50% 0%;
+}

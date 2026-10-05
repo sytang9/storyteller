@@ -31,7 +31,7 @@ def align(caps, spoken, total):
 pipe = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
 for b in beats:
     chunks, words, off = [], [], 0.0
-    for r in pipe(b["text"], voice=VOICE, speed=0.95):
+    for r in pipe(b["text"], voice=VOICE, speed=b.get("speed", 0.92)):
         a = np.asarray(r.audio.cpu() if hasattr(r.audio, "cpu") else r.audio); chunks.append(a)
         for t in (r.tokens or []):
             if t.start_ts is not None and re.search(r"\w", t.text):

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=1920, height=1080" />
     <title>Teaser</title>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/CustomEase.min.js"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -35,8 +36,14 @@
         orange: "#a84a0c",
         good: "#0e7040",
       };
+      gsap.registerPlugin(CustomEase);
+      // motion vocabulary (Material 3 shapes): entrances decelerate, exits accelerate, moves use the emphasized curve
+      const ENTER = CustomEase.create("enter", "0.05,0.7,0.1,1");
+      const EXIT = CustomEase.create("exit", "0.3,0,0.8,0.15");
+      const MOVE = CustomEase.create("move", "0.2,0,0,1");
       const LEAD = 0.3; // a visual change lands this long before the word it illustrates
-      const XFADE = 0.4; // scene crossfade in the gap between beats
+      const EXIT_DUR = 0.3; // the outgoing scene leaves (ease-in) before the boundary...
+      const ENTER_DUR = 0.4; // ...and the next enters after it: two scenes never dissolve into each other
       const D = window.TEASER;
 
       const el = (tag, cls, parent, css = {}, text) => {
@@ -63,12 +70,12 @@
       const cue = (b, token, nth = 0) => wordAt(b, token, nth) - LEAD;
       // the node holds its "from" state until it pops in (otherwise it shows from the scene start)
       const popIn = (n, at, from = { opacity: 0, y: 24 }) =>
-        tl.set(n, from, 0) && tl.fromTo(n, from, { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.45, ease: "power3.out", immediateRender: false }, at);
+        tl.set(n, from, 0) && tl.fromTo(n, from, { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.5, ease: ENTER, immediateRender: false }, at);
       const drawLine = (path, at, dur = 0.4) => {
         const len = path.getTotalLength();
         path.style.strokeDasharray = `${len}`;
         path.style.strokeDashoffset = `${len}`;
-        tl.to(path, { strokeDashoffset: 0, duration: dur, ease: "power2.inOut" }, at);
+        tl.to(path, { strokeDashoffset: 0, duration: dur, ease: MOVE }, at);
       };
       // a palette key from the data ("blue", "good", ...) or a literal colour
       const col = (name) => C[name] || name;
@@ -78,131 +85,132 @@
         if (eyebrow) el("div", "t-eyebrow", h, {}, eyebrow);
         return title === undefined ? null : el("div", "t-h1", h, {}, title);
       };
+      // key-word label: 2-5 words beside an object, landing LEAD s before its spoken word.
+      // spec: {text, word, x, y, align?: left|center|right, color?, kind?: "plain"|"tag", until?: word}; x, y in scene px
+      //   until: the label leaves on that word (when the state it names stops being true)
+      const keyLabel = (root, b, l, x = l.x, y = l.y) => {
+        const n = el("div", "abs key-label " + (l.kind === "tag" ? "tag" : "plain"), root, { left: x + "px", top: y + "px" }, l.text);
+        if (l.color && l.kind !== "tag") n.style.color = col(l.color);
+        const w = Array.isArray(l.word) ? l.word : [l.word];
+        const xp = { center: -50, right: -100 }[l.align] || 0; // xPercent keeps the alignment while GSAP moves y
+        tl.set(n, { xPercent: xp, opacity: 0, y: 12 }, 0);
+        tl.to(n, { opacity: 1, y: 0, duration: 0.5, ease: ENTER }, cue(b, ...w));
+        if (l.until) tl.to(n, { opacity: 0, duration: 0.25, ease: EXIT }, cue(b, ...[].concat(l.until)));
+        return n;
+      };
+      // continuity: beats that share scene.hero get the same element, so the object transforms instead of cutting.
+      // heroGroup(b) is the hero's layer, for props that persist across those beats (lanes, tool cards);
+      // heroProps(b) is a plain store where one beat leaves those props for the next.
+      const HEROES = {};
+      const heroLayer = el("div", "abs hero-layer", document.getElementById("stage"));
+      const heroId = (b) => {
+        if (!b.scene.hero) throw new Error(`beat ${b.id}: scene.hero missing`);
+        return b.scene.hero;
+      };
+      const heroEntry = (b) => {
+        const id = heroId(b);
+        if (!HEROES[id]) {
+          const group = el("div", "abs hero-group", heroLayer);
+          HEROES[id] = { group, node: null, props: {} };
+        }
+        return HEROES[id];
+      };
+      const heroGroup = (b) => heroEntry(b).group;
+      const heroProps = (b) => heroEntry(b).props;
+      const hero = (b) => {
+        const h = heroEntry(b);
+        h.node = h.node || el("div", "abs hero", h.group);
+        return h.node;
+      };
 
     </script>
     <script src="scenes.js"></script>
+    <script src="ui.js"></script>
+    <!-- CUSTOM:START -->
+    <!-- CUSTOM:END -->
     <script>
       // the one paused timeline; helpers above and scenes.js add to it when the build below calls them
       const tl = gsap.timeline({ paused: true });
-      // ================= ui scene (generic, driven by tour data) =================
-      const SHOT_W = 1568;
-      const SHOT_H = 882;
-      const BOX_PAD = 0.04; // pad the box by this share of the still width on each side
-      const DIM_PAD = 0.015; // the dimmed hole hugs the box more tightly than the zoom region
-      const WIDE = 0.65; // a padded box wider than this share of the still frames its text instead
-      const TEXT_SPAN = 1.15; // ...with a view this many times the text width
-      const ZOOM_MIN_W = 0.4; // ...but at least this share of the still width
-      const BOX_EXTRA_H = 0.08; // view height is at least the box height plus this share of the still height
-      const ZOOM_DUR = 1.0;
-      function padBox(box, [sw, sh], pad = BOX_PAD) {
-        const p = sw * pad;
-        return { x0: Math.max(0, box.x0 - p), y0: Math.max(0, box.y0 - p), x1: Math.min(sw, box.x1 + p), y1: Math.min(sh, box.y1 + p) };
-      }
-      // the 16:9 view the camera fills the card with (fill 1.0), clamped inside the still
-      function zoomView(box, text, [sw, sh]) {
-        const pb = padBox(box, [sw, sh]);
-        let w = pb.x1 - pb.x0;
-        let cx = (pb.x0 + pb.x1) / 2;
-        if (w > sw * WIDE) {
-          w = Math.max(TEXT_SPAN * (text.x1 - text.x0), sw * ZOOM_MIN_W);
-          cx = (text.x0 + text.x1) / 2;
-        }
-        const h = Math.min(sh, Math.max((w * 9) / 16, box.y1 - box.y0 + sh * BOX_EXTRA_H));
-        w = Math.min(sw, (h * 16) / 9);
-        const vh = (w * 9) / 16;
-        const x = Math.min(Math.max(cx - w / 2, 0), sw - w);
-        const y = Math.min(Math.max((box.y0 + box.y1) / 2 - vh / 2, 0), sh - vh);
-        return { x, y, w, h: vh };
-      }
-      function sceneUi(root, b) {
-        const u = b.ui;
-        const shot = el("div", "abs card shot", root);
-        const cam = el("div", "abs cam", shot);
-        cam.setAttribute("data-layout-allow-overflow", ""); // the camera moves a 4K still inside the card
-        const s0 = SHOT_W / u.size[0];
-        const after = el("img", "", cam);
-        after.src = u.after;
-        after.alt = "";
-        const pb = padBox(u.box, u.size, DIM_PAD);
-        const spot = el("div", "abs spot", cam, { left: pb.x0 + "px", top: pb.y0 + "px", width: pb.x1 - pb.x0 + "px", height: pb.y1 - pb.y0 + "px" });
-        tl.set(cam, { x: 0, y: 0, scale: s0 }, 0);
-        tl.set(spot, { opacity: 0 }, 0);
-        popIn(shot, b.start, { opacity: 0, y: 30, scale: 0.98 });
-        let free = b.start + 0.5;
-        if (u.before) {
-          const before = el("img", "", cam);
-          before.src = u.before;
-          before.alt = "";
-          const press = u.clickAt - LEAD;
-          pressRipple(shot, u.click.x * s0, u.click.y * s0, press);
-          tl.fromTo(before, { opacity: 1 }, { opacity: 0, duration: 0.35, ease: "power1.inOut", immediateRender: false }, press + 0.15);
-          free = press + 0.6;
-        }
-        // the zoom settles LEAD s before the anchor word and holds to the end of the beat
-        const land = u.focusAt - LEAD;
-        const start = Math.min(Math.max(free, land - ZOOM_DUR), land - 0.5);
-        const v = zoomView(u.box, u.text, u.size);
-        const s1 = SHOT_W / v.w;
-        tl.fromTo(cam, { x: 0, y: 0, scale: s0 }, { x: -v.x * s1, y: -v.y * s1, scale: s1, duration: land - start, ease: "power2.inOut", immediateRender: false }, start);
-        tl.to(spot, { opacity: 1, duration: 0.5, ease: "power1.out" }, land - 0.25);
-      }
-
-      // press-ripple (catalog block, ported inline): decel arrival, lockstep press, two click rings, exit
-      function pressRipple(parent, x, y, pressAt) {
-        const rings = svgEl("svg", parent, { class: "abs", width: SHOT_W, height: SHOT_H, style: "left:0;top:0;overflow:visible" });
-        const rs = [1, 0.6].map(() => svgEl("circle", rings, { cx: x, cy: y, r: 16, fill: "none", stroke: C.blue, "stroke-width": 3, opacity: 0 }));
-        const cur = el("div", "abs cursor", parent, { left: (-5 / 24) * 60 + "px", top: (-3 / 24) * 60 + "px", transformOrigin: `${(5 / 24) * 60}px ${(3 / 24) * 60}px` });
-        cur.setAttribute("data-layout-allow-overflow", ""); // parks off-card before and after the press
-        const svg = svgEl("svg", cur, { viewBox: "0 0 24 24" });
-        svgEl("path", svg, { d: "M5 3 L5 19 L9 15 L12 22 L15 20.5 L11.5 14 L18 14 Z", fill: "#ffffff", stroke: C.ink, "stroke-width": 1.4, "stroke-linejoin": "round" });
-        const lx = x + 3;
-        const ly = y + 4;
-        tl.fromTo(cur, { x: SHOT_W * 1.08, y: SHOT_H * 1.1 }, { x: lx, y: ly, duration: 0.45, ease: "power3.out", immediateRender: false }, pressAt - 0.6);
-        tl.set(cur, { x: SHOT_W * 1.08, y: SHOT_H * 1.1 }, 0);
-        tl.to(cur, { scale: 0.93, duration: 0.12, ease: "power1.in" }, pressAt);
-        tl.to(cur, { scale: 1, duration: 0.42, ease: "back.out(1.8)" }, pressAt + 0.14);
-        rs.forEach((r, i) => {
-          const at = pressAt + 0.12 + i * 0.06;
-          tl.fromTo(r, { attr: { r: 16 } }, { attr: { r: 72 }, duration: 0.32, ease: "power2.out", immediateRender: false }, at);
-          tl.fromTo(r, { opacity: [1, 0.6][i] }, { opacity: 0, duration: 0.32, ease: "power1.in", immediateRender: false }, at);
-        });
-        tl.fromTo(cur, { x: lx, y: ly }, { x: SHOT_W * 1.08, y: SHOT_H * 1.1, duration: 0.4, ease: "power2.in", immediateRender: false }, pressAt + 0.4);
-      }
-
       // ================= assembly =================
-      // centre a scene's content in the stage area (layout boxes, transforms ignored; full-frame SVG layers skipped)
-      const STAGE_H = 900;
-      function centreScene(root) {
-        let top = Infinity;
-        let bottom = -Infinity;
-        for (const n of root.children) {
+      // fit: a scene's body (everything but its heading) is scaled up and centred in the free area, so content fills the
+      // frame. Beats that share a hero share one fit, so the hero and its props line up across the cut.
+      const IS_FULL = D.captions === "full";
+      const FRAME_H = IS_FULL ? 900 : 1080; // keywords mode uses the whole frame; full mode keeps the caption band
+      const FIT_MAX = 1.3;
+      const FIT_X = 120; // side margin, the same as the heading
+      const FIT_TOP = 216; // below the heading
+      const FIT_BOTTOM = FRAME_H - (IS_FULL ? 24 : 56); // a quiet bottom margin, not an empty band
+      const UI_MARGIN = 40; // ui scenes have no heading
+      function boxOf(nodes) {
+        const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+        for (const n of nodes) {
           if (n.tagName.toLowerCase() === "svg" || !n.offsetHeight) continue;
-          top = Math.min(top, n.offsetTop);
-          bottom = Math.max(bottom, n.offsetTop + n.offsetHeight);
+          const w = n.offsetWidth;
+          const x = n.offsetLeft + (n.classList.contains("key-label") ? (gsap.getProperty(n, "xPercent") / 100) * w : 0);
+          box.x0 = Math.min(box.x0, x);
+          box.y0 = Math.min(box.y0, n.offsetTop);
+          box.x1 = Math.max(box.x1, x + w);
+          box.y1 = Math.max(box.y1, n.offsetTop + n.offsetHeight);
         }
-        if (!(top < bottom)) return;
-        const shift = Math.round((STAGE_H - (top + bottom)) / 2);
-        root.style.top = shift + "px";
-        root.style.height = STAGE_H - shift + "px"; // keep the scene box inside the stage
+        return box;
+      }
+      function fitTransform(box, isUi) {
+        if (!(box.x0 < box.x1)) return "";
+        const top = isUi ? UI_MARGIN : FIT_TOP;
+        const bottom = isUi ? FRAME_H - UI_MARGIN : FIT_BOTTOM;
+        const left = isUi ? UI_MARGIN : FIT_X;
+        const bw = box.x1 - box.x0;
+        const bh = box.y1 - box.y0;
+        const aw = 1920 - 2 * left;
+        // content already wider than the area keeps its size (it was laid out for the full width)
+        const sw = bw <= aw ? aw / bw : Math.min(1, 1856 / bw);
+        const sc = Math.min(FIT_MAX, sw, (bottom - top) / bh);
+        const tx = 960 - sc * (box.x0 + bw / 2);
+        const ty = (top + bottom) / 2 - sc * (box.y0 + bh / 2);
+        return `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${sc.toFixed(4)})`;
       }
       const stage = document.getElementById("stage");
+      stage.style.height = FRAME_H + "px";
+      heroLayer.style.height = FRAME_H + "px";
+      if (!IS_FULL) document.getElementById("band").style.display = "none";
+      const bodies = [];
       D.beats.forEach((b, i) => {
         const next = D.beats[i + 1];
-        const root = el("div", "abs scene", stage);
+        const root = el("div", "abs scene", stage, { height: FRAME_H + "px" });
         const type = b.kind === "ui" ? "ui" : b.scene && b.scene.type;
-        const build = type === "ui" ? sceneUi : window.SCENES[type];
+        // custom: a module next to the beats file registers window.SCENES["<file>.js"] (build.py loads it)
+        const build = type === "ui" ? sceneUi : window.SCENES[type === "custom" ? b.scene.module : type];
         if (!build) throw new Error(`beat ${b.id}: no scene type "${type}"`);
         build(root, b);
-        centreScene(root);
+        if (b.kind !== "ui") (b.scene.labels || []).forEach((l) => keyLabel(root, b, l));
+        const body = el("div", "abs scene-body", root, { height: FRAME_H + "px" });
+        [...root.children].filter((n) => n !== body && !n.classList.contains("head")).forEach((n) => body.appendChild(n));
+        bodies.push({ b, body, group: b.scene.hero || b.id });
+        // exit, then enter: the outgoing scene leaves before the boundary, the next one enters after it
         if (i === 0) tl.set(root, { opacity: 1 }, 0);
-        else tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: XFADE, ease: "power1.inOut", immediateRender: false }, b.start - XFADE / 2);
-        if (next) tl.to(root, { opacity: 0, duration: XFADE, ease: "power1.inOut" }, next.start - XFADE / 2);
+        else tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ENTER_DUR, ease: ENTER, immediateRender: false }, b.start);
+        if (next) tl.to(root, { opacity: 0, duration: EXIT_DUR, ease: EXIT }, next.start - EXIT_DUR);
+        // a hero (and its props) leaves with the last beat that names it
+        const h = b.scene && b.scene.hero;
+        if (h && next && (next.scene || {}).hero !== h) tl.to(HEROES[h].group, { opacity: 0, duration: EXIT_DUR, ease: EXIT }, next.start - EXIT_DUR);
       });
+      // one fit per group: a lone beat, or every beat that shares a hero plus the hero's layer
+      const groups = {};
+      bodies.forEach((q) => (groups[q.group] = groups[q.group] || []).push(q));
+      Object.entries(groups).forEach(([id, list]) => {
+        const nodes = list.flatMap((q) => [...q.body.children]);
+        if (HEROES[id]) nodes.push(...HEROES[id].group.children);
+        const t = fitTransform(boxOf(nodes), list[0].b.kind === "ui");
+        list.forEach((q) => Object.assign(q.body.style, { transformOrigin: "0 0", transform: t }));
+        if (HEROES[id]) Object.assign(HEROES[id].group.style, { transformOrigin: "0 0", transform: t });
+      });
+      stage.appendChild(heroLayer); // heroes draw above every scene
 
       // captions: one phrase at a time; upcoming words muted, the active word in accent, spoken words in ink
       const band = document.getElementById("band");
       const CAPTION_LEAD = 0.05; // the highlight leads the audio by about one frame and a half
-      D.beats.forEach((b) =>
+      // burned captions only in "full" mode; the VTT is always written
+      if (D.captions === "full") D.beats.forEach((b) =>
         b.phrases.forEach((p) => {
           const box = el("div", "abs phrase", band);
           const para = el("p", "", box);

@@ -29,3 +29,20 @@ def test_long_caption_breaks_at_early_comma_and_every_phrase_fits():
 def test_no_word_lost():
     c = " ".join(["word"] * 60)
     assert " ".join(texts(c)) == c and all(len(p) <= 80 for p in texts(c))
+
+
+import pytest
+from build import check_words, copy_module
+
+
+def test_label_word_must_be_in_caption():
+    ws = words("One job, seven steps.")
+    check_words({"id": "x"}, {"labels": [{"word": "steps"}], "click": "job"}, ws)
+    with pytest.raises(SystemExit):
+        check_words({"id": "x"}, {"labels": [{"word": "baton"}]}, ws)
+
+
+def test_custom_module_must_be_a_plain_existing_js_file(tmp_path):
+    for bad in [None, "../x.js", "x.txt", "missing.js"]:
+        with pytest.raises(SystemExit):
+            copy_module({"module": bad}, tmp_path)

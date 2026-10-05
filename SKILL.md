@@ -97,7 +97,8 @@ wrong; skip the test for revisions and internal pages.
 ## Optional teaser video: suggest, ask, then build
 
 After delivery, if the story has a mechanism that moves or a real screen the reader must picture, suggest a
-60-90 s narrated teaser. Name the 2-4 scenes and say it costs millions of tokens and 12-25 minutes. Build it only
-if the user says yes, and never suggest it for a short or simple report. Steps: `references/teaser.md`.
+narrated teaser that frames the report. Name 2-4 scenes and offer two levels with their costs: template scenes
+(4-9M tokens, 12-25 min) or bespoke scenes (about 19M, 50 min). Build only on a yes, and never suggest it for a
+short or simple report. Steps and the script checklist: `references/teaser.md`.
 
 Deliver the local file and its served link (`path2url` if the user has one). Never an Artifact.
