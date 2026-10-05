@@ -329,8 +329,16 @@ function sceneChips(root, b) {
     const z = cue(b, w1);
     list.forEach((n, i) => popIn(n, a + ((z - a) * i) / Math.max(1, list.length - 1), from));
   };
+  root.dataset.fit = "fill"; // the assembly scales the grid to fill the free area (FILL_W of its width)
   if (s.focus) return chipsFocus(root, b, s, items, spread);
-  const COLS = s.cols || 4, W = 408, H = 176, G = 24;
+  const W = 408, H = 176, G = 24;
+  // cols is an upper bound: take the column count whose grid fills the free area at the largest scale
+  const fillScale = (c) => {
+    const r = Math.ceil(items.length / c);
+    return Math.min(FILL_MAX, (FILL_W * FREE.w) / (c * W + (c - 1) * G), FREE.h / (r * H + (r - 1) * G));
+  };
+  let COLS = 1;
+  for (let c = 2; c <= Math.min(s.cols || 4, items.length); c++) if (fillScale(c) > fillScale(COLS)) COLS = c;
   const left = (1920 - (COLS * W + (COLS - 1) * G)) / 2;
   const chips = items.map((it, i) => {
     const c = el("div", "abs card", root, { left: left + (i % COLS) * (W + G) + "px", top: 216 + Math.floor(i / COLS) * (H + G) + "px", width: W + "px", height: H + "px", padding: "20px 24px", display: "flex", flexDirection: "column", justifyContent: "space-between" });
@@ -345,22 +353,29 @@ function sceneChips(root, b) {
   if (s.tag) spread(chips.map((k) => k.tag), s.tagIn, { opacity: 0, y: 0, scale: 0.6 });
 }
 function chipsFocus(root, b, s, items, spread) {
-  const FW = 560, FH = 300, FG = 40, RH = 72, RG = 24, COLS = 3;
-  const fx = (1920 - (COLS * FW + (COLS - 1) * FG)) / 2;
+  const FH = 360, FG = 40, RH = 72, RG = 24, MAX_W = 560;
+  const rest = items.filter((_, k) => !s.focus.includes(k));
+  const COLS = Math.max(1, Math.min(3, rest.length)); // the dim chips below
+  const cols = Math.max(s.focus.length, COLS);
+  // columns narrow enough that the widest row spans FILL_W of the free width at scale >= 1 (text stays >= 32 px)
+  const FW = Math.min(MAX_W, Math.floor((FILL_W * FREE.w - (cols - 1) * FG) / cols));
+  const rowX = (n) => (1920 - (n * FW + (n - 1) * FG)) / 2; // each row is centred on its own
+  const fx = rowX(s.focus.length);
+  const rx = rowX(COLS);
   const focus = s.focus.map((k, i) => {
     const it = items[k];
     const c = el("div", "abs card", root, { left: fx + i * (FW + FG) + "px", top: "224px", width: FW + "px", height: FH + "px", borderWidth: "3px", borderColor: C.ink });
-    el("div", "abs t-h2", c, { left: "32px", top: "32px", width: FW - 64 + "px", textWrap: "balance" }, it.text);
-    const d = it.detail ? el("div", "abs t-body", c, { left: "32px", bottom: "28px", width: FW - 64 + "px", color: C.blue }, it.detail) : null;
+    el("div", "abs t-h1", c, { left: "32px", top: "32px", width: FW - 64 + "px", textWrap: "balance" }, it.text);
+    const d = it.detail ? el("div", "abs t-h2", c, { left: "32px", bottom: "28px", width: FW - 64 + "px", color: C.blue, fontWeight: 600, textWrap: "balance" }, it.detail) : null;
     if (it.steps) stepEcho(c, b, it.steps);
     return { c, d, word: it.word };
   });
-  const rest = items.filter((_, k) => !s.focus.includes(k));
-  const group = el("div", "abs", root, { left: 0, top: 224 + FH + 48 + "px", width: "1920px", height: Math.ceil(rest.length / COLS) * (RH + RG) - RG + "px" });
+  // the group is exactly as wide as its chips, so the fill measures the content and not the frame
+  const group = el("div", "abs", root, { left: rx + "px", top: 224 + FH + 48 + "px", width: COLS * FW + (COLS - 1) * FG + "px", height: Math.max(0, Math.ceil(rest.length / COLS) * (RH + RG) - RG) + "px" });
   rest.forEach((it, i) =>
     s.restText === false
-      ? blankChip(group, fx + (i % COLS) * (FW + FG), Math.floor(i / COLS) * (RH + RG), FW, RH)
-      : el("div", "abs dim-chip t-body", group, { left: fx + (i % COLS) * (FW + FG) + "px", top: Math.floor(i / COLS) * (RH + RG) + "px", width: FW + "px", height: RH + "px" }, it.text),
+      ? blankChip(group, (i % COLS) * (FW + FG), Math.floor(i / COLS) * (RH + RG), FW, RH)
+      : el("div", "abs dim-chip t-body", group, { left: (i % COLS) * (FW + FG) + "px", top: Math.floor(i / COLS) * (RH + RG) + "px", width: FW + "px", height: RH + "px" }, it.text),
   );
   tl.set(focus.flatMap((f) => [f.c, f.d].filter(Boolean)), { opacity: 0 }, 0);
   // focus cards enter on their own word when they name one, otherwise spread over s.in

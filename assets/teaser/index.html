@@ -45,6 +45,19 @@
       const EXIT_DUR = 0.3; // the outgoing scene leaves (ease-in) before the boundary...
       const ENTER_DUR = 0.4; // ...and the next enters after it: two scenes never dissolve into each other
       const D = window.TEASER;
+      // the free area a scene body is fitted into (the assembly below); scenes may read it to pick a layout
+      const IS_FULL = D.captions === "full";
+      const FRAME_H = IS_FULL ? 900 : 1080; // keywords mode uses the whole frame; full mode keeps the caption band
+      const FIT_MAX = 1.3;
+      const FIT_X = 120; // side margin, the same as the heading
+      const FIT_TOP = 216; // below the heading
+      const FIT_BOTTOM = FRAME_H - (IS_FULL ? 24 : 56); // a quiet bottom margin, not an empty band
+      const UI_MARGIN = 40; // ui scenes have no heading
+      // fill: a scene that sets root.dataset.fit = "fill" (grids of cards) is scaled to FILL_W of the free width
+      // (or to the free height, if that is smaller), up or down; it lays out so that this scale keeps text >= 32 px
+      const FILL_W = 0.8;
+      const FILL_MAX = 2;
+      const FREE = { w: 1920 - 2 * FIT_X, h: FIT_BOTTOM - FIT_TOP };
 
       const el = (tag, cls, parent, css = {}, text) => {
         const n = document.createElement(tag);
@@ -134,13 +147,6 @@
       // ================= assembly =================
       // fit: a scene's body (everything but its heading) is scaled up and centred in the free area, so content fills the
       // frame. Beats that share a hero share one fit, so the hero and its props line up across the cut.
-      const IS_FULL = D.captions === "full";
-      const FRAME_H = IS_FULL ? 900 : 1080; // keywords mode uses the whole frame; full mode keeps the caption band
-      const FIT_MAX = 1.3;
-      const FIT_X = 120; // side margin, the same as the heading
-      const FIT_TOP = 216; // below the heading
-      const FIT_BOTTOM = FRAME_H - (IS_FULL ? 24 : 56); // a quiet bottom margin, not an empty band
-      const UI_MARGIN = 40; // ui scenes have no heading
       function boxOf(nodes) {
         const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
         for (const n of nodes) {
@@ -154,8 +160,9 @@
         }
         return box;
       }
-      function fitTransform(box, isUi) {
+      function fitTransform(box, mode) {
         if (!(box.x0 < box.x1)) return "";
+        const isUi = mode === "ui";
         const top = isUi ? UI_MARGIN : FIT_TOP;
         const bottom = isUi ? FRAME_H - UI_MARGIN : FIT_BOTTOM;
         const left = isUi ? UI_MARGIN : FIT_X;
@@ -164,7 +171,7 @@
         const aw = 1920 - 2 * left;
         // content already wider than the area keeps its size (it was laid out for the full width)
         const sw = bw <= aw ? aw / bw : Math.min(1, 1856 / bw);
-        const sc = Math.min(FIT_MAX, sw, (bottom - top) / bh);
+        const sc = mode === "fill" ? Math.min(FILL_MAX, (FILL_W * aw) / bw, (bottom - top) / bh) : Math.min(FIT_MAX, sw, (bottom - top) / bh);
         const tx = 960 - sc * (box.x0 + bw / 2);
         const ty = (top + bottom) / 2 - sc * (box.y0 + bh / 2);
         return `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${sc.toFixed(4)})`;
@@ -185,7 +192,7 @@
         if (b.kind !== "ui") (b.scene.labels || []).forEach((l) => keyLabel(root, b, l));
         const body = el("div", "abs scene-body", root, { height: FRAME_H + "px" });
         [...root.children].filter((n) => n !== body && !n.classList.contains("head")).forEach((n) => body.appendChild(n));
-        bodies.push({ b, body, group: b.scene.hero || b.id });
+        bodies.push({ b, body, group: b.scene.hero || b.id, fit: b.kind === "ui" ? "ui" : root.dataset.fit || "fit" });
         // exit, then enter: the outgoing scene leaves before the boundary, the next one enters after it
         if (i === 0) tl.set(root, { opacity: 1 }, 0);
         else tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ENTER_DUR, ease: ENTER, immediateRender: false }, b.start);
@@ -200,7 +207,7 @@
       Object.entries(groups).forEach(([id, list]) => {
         const nodes = list.flatMap((q) => [...q.body.children]);
         if (HEROES[id]) nodes.push(...HEROES[id].group.children);
-        const t = fitTransform(boxOf(nodes), list[0].b.kind === "ui");
+        const t = fitTransform(boxOf(nodes), list[0].fit);
         list.forEach((q) => Object.assign(q.body.style, { transformOrigin: "0 0", transform: t }));
         if (HEROES[id]) Object.assign(HEROES[id].group.style, { transformOrigin: "0 0", transform: t });
       });

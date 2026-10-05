@@ -236,24 +236,23 @@ svg.layer {
   width: 1568px;
   height: 882px;
 }
+/* the camera and its stills take their size from tour.json `size` (ui.js) */
 .cam {
   left: 0;
   top: 0;
-  width: 3840px;
-  height: 2160px;
   transform-origin: 0 0;
 }
 .cam img {
   position: absolute;
   left: 0;
   top: 0;
-  width: 3840px;
-  height: 2160px;
 }
-/* soft spotlight: a blurred dim outside the padded box, no outline */
-.spot {
-  border-radius: 28px;
-  box-shadow: 0 0 60px 6000px rgba(29, 35, 48, 0.34);
+/* soft spotlight: a blurred dim outside the padded box (radius and shadow set in ui.js, scaled to the zoom) */
+/* the box outline: thin, rounded, accent. This lighter blue keeps >= 3:1 on white and on dark UI (#23272e),
+   so it marks the box where the dim alone does not show */
+.ring {
+  border: 3px solid #2f7de1;
+  border-radius: 16px; /* RING_R in ui.js */
 }
 .cursor {
   left: 0;

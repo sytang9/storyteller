@@ -32,27 +32,31 @@ function zoomView(box, text, [sw, sh]) {
   const y = Math.min(Math.max((box.y0 + box.y1) / 2 - vh / 2, 0), sh - vh);
   return { x, y, w, h: vh };
 }
+const RING_INSET = 4; // the outline stays this far inside the card when the box runs past the settled view
+const RING_R = 16; // corner radius of the outline and of the dim's hole, in card pixels at the settled view
+const SPOT_BLUR = 40; // the dim's soft edge, in card pixels at the settled view
 function sceneUi(root, b) {
   const u = b.ui;
+  const [sw, sh] = u.size; // the still's own pixels: any resolution and aspect
   const shot = el("div", "abs card shot", root);
-  const cam = el("div", "abs cam", shot);
-  cam.setAttribute("data-layout-allow-overflow", ""); // the camera moves a 4K still inside the card
-  const s0 = SHOT_W / u.size[0];
-  const after = el("img", "", cam);
-  after.src = u.after;
-  after.alt = "";
+  const cam = el("div", "abs cam", shot, { width: sw + "px", height: sh + "px" });
+  cam.setAttribute("data-layout-allow-overflow", ""); // the camera moves the still inside the card
+  // the opening view shows the whole still, centred in the card (letterboxed when its aspect is not 16:9)
+  const s0 = Math.min(SHOT_W / sw, SHOT_H / sh);
+  const x0 = (SHOT_W - sw * s0) / 2;
+  const y0 = (SHOT_H - sh * s0) / 2;
+  const img = (src) => Object.assign(el("img", "", cam, { width: sw + "px", height: sh + "px" }), { src, alt: "" });
+  img(u.after);
   const pb = padBox(u.box, u.size, DIM_PAD);
   const spot = el("div", "abs spot", cam, { left: pb.x0 + "px", top: pb.y0 + "px", width: pb.x1 - pb.x0 + "px", height: pb.y1 - pb.y0 + "px" });
-  tl.set(cam, { x: 0, y: 0, scale: s0 }, 0);
+  tl.set(cam, { x: x0, y: y0, scale: s0 }, 0);
   tl.set(spot, { opacity: 0 }, 0);
   popIn(shot, b.start, { opacity: 0, y: 30, scale: 0.98 });
   let free = b.start + 0.5;
   if (u.before) {
-    const before = el("img", "", cam);
-    before.src = u.before;
-    before.alt = "";
+    const before = img(u.before);
     const press = u.clickAt - LEAD;
-    pressRipple(shot, u.click.x * s0, u.click.y * s0, press);
+    pressRipple(shot, x0 + u.click.x * s0, y0 + u.click.y * s0, press);
     tl.fromTo(before, { opacity: 1 }, { opacity: 0, duration: 0.35, ease: "power1.inOut", immediateRender: false }, press + 0.15);
     free = press + 0.6;
   }
@@ -61,8 +65,16 @@ function sceneUi(root, b) {
   const start = Math.min(Math.max(free, land - ZOOM_DUR), land - 0.5);
   const v = zoomView(u.box, u.text, u.size);
   const s1 = SHOT_W / v.w;
-  tl.fromTo(cam, { x: 0, y: 0, scale: s0 }, { x: -v.x * s1, y: -v.y * s1, scale: s1, duration: land - start, ease: MOVE, immediateRender: false }, start);
-  tl.to(spot, { opacity: 1, duration: 0.5, ease: ENTER }, land - 0.25);
+  tl.fromTo(cam, { x: x0, y: y0, scale: s0 }, { x: -v.x * s1, y: -v.y * s1, scale: s1, duration: land - start, ease: MOVE, immediateRender: false }, start);
+  // the dim lives in still pixels: divide by the zoom so its corners and edge look the same on any still size
+  Object.assign(spot.style, { borderRadius: RING_R / s1 + "px", boxShadow: `0 0 ${SPOT_BLUR / s1}px ${2 * Math.max(sw, sh)}px rgba(29, 35, 48, 0.34)` });
+  // the dim alone vanishes on a dark still, so a thin accent outline marks the box too. It sits in card pixels at the
+  // settled view (outside the camera), so its stroke keeps one width whatever the zoom.
+  const cx = (x) => Math.min(Math.max((x - v.x) * s1, RING_INSET), SHOT_W - RING_INSET);
+  const cy = (y) => Math.min(Math.max((y - v.y) * s1, RING_INSET), SHOT_H - RING_INSET);
+  const ring = el("div", "abs ring", shot, { left: cx(pb.x0) + "px", top: cy(pb.y0) + "px", width: cx(pb.x1) - cx(pb.x0) + "px", height: cy(pb.y1) - cy(pb.y0) + "px" });
+  tl.set(ring, { opacity: 0 }, 0);
+  tl.to([spot, ring], { opacity: 1, duration: 0.5, ease: ENTER }, land - 0.25);
   uiLabels(root, b, v, s1, pb);
 }
 

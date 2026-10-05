@@ -8,7 +8,7 @@ Usage: python3 build.py [--src ..] [--beats beats.timed.json] [--vtt teaser.vtt]
   src      = folder holding voice/ and shots/ (default: the parent folder)
   beats    = the beat file with a `scene` object per beat (default: the one next to this script)
   vtt      = caption file name, written into src (always written, in both caption modes)
-  captions = keywords (default: no sentence text on screen, only scene.labels) or full (burned captions too)
+  captions = full (default: burned captions in the reserved bottom band, plus scene.labels) or keywords (labels only)
 """
 
 import argparse
@@ -104,7 +104,7 @@ def main():
     ap.add_argument("--src", default=str(HERE.parent))
     ap.add_argument("--beats", default=str(HERE / "beats.timed.json"))
     ap.add_argument("--vtt", default="teaser.vtt")
-    ap.add_argument("--captions", choices=["keywords", "full"], default="keywords")
+    ap.add_argument("--captions", choices=["keywords", "full"], default="full")
     args = ap.parse_args()
     src = Path(args.src)
     beats_path = Path(args.beats)
