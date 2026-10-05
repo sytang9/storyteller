@@ -80,7 +80,8 @@ ffmpeg. Work in `<report>/teaser/`; per report you write only data and, at the b
 - Cold-viewer test for a teaser that leaves the team: a fresh subagent sees those frames only, states the claim and
   lists what confused it; then it reads the script. Fix what it gets wrong.
 - Embed it in the report itself: add the block below to the report's source right after the answer box, add one
-  changelog line, and rebuild the page. Never make a separate preview page. The MP4 stays a sidecar file in
+  changelog line, rebuild the page, and run `check_layout.py` (a video without the skill's CSS scrolls the page
+  sideways at its native 1920 px). Never make a separate preview page. The MP4 stays a sidecar file in
   `teaser/` (8-20 MB); never inline it. Captions are burned in, so the track stays off by default:
 
 ```html
