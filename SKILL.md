@@ -94,4 +94,10 @@ build and the layout check once at the end. For a new story that leaves the team
 we are, what is unknown, what happens next, and which chapter it could skip. Fix only what it gets
 wrong; skip the test for revisions and internal pages.
 
+## Optional teaser video: suggest, ask, then build
+
+After delivery, if the story has a mechanism that moves or a real screen the reader must picture, suggest a
+60-90 s narrated teaser. Name the 2-4 scenes and say it costs millions of tokens and 12-25 minutes. Build it only
+if the user says yes, and never suggest it for a short or simple report. Steps: `references/teaser.md`.
+
 Deliver the local file and its served link (`path2url` if the user has one). Never an Artifact.

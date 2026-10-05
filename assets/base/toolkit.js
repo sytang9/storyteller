@@ -114,6 +114,81 @@
   });
   });
 
+  // Chapter rail — a fixed right-edge strip of chapter numerals built from the
+  // story's own `.chapter-no[id]` markers, the current chapter marked, its h3
+  // sub-sections as dots under it only. Numerals, not bare dots: dots-only
+  // navigation tests poorly and hover-only labels fail on touch, so the rail is
+  // a desktop glance-and-jump aid (CSS hides it below 1100px, where the Contents
+  // drawer and the progress bar already serve). Built after the content in the
+  // DOM so tab order stays content first.
+  wire("chapter rail", () => {
+    const marks = $$(".report-grid .chapter-no[id]");
+    if (marks.length < 3) return;
+    const isAfter = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+    const subs = $$(".report-grid h3[id]");
+    const chapters = marks.map((m, i) => {
+      let h = m.nextElementSibling;
+      while (h && !/^H[23]$/.test(h.tagName)) h = h.nextElementSibling;
+      const next = marks[i + 1];
+      return {
+        mark: m,
+        num: (m.firstChild && m.firstChild.textContent || String(i + 1)).trim(),
+        title: (h ? h.textContent : m.textContent).trim(),
+        subs: subs.filter(s => isAfter(m, s) && (!next || isAfter(s, next))),
+      };
+    });
+    const link = (href, cls, label, visible) => {
+      const a = document.createElement("a");
+      a.href = "#" + href; a.className = cls;
+      if (visible) { const n = document.createElement("span"); n.className = "rail-num"; n.textContent = visible; n.setAttribute("aria-hidden", "true"); a.appendChild(n); }
+      const l = document.createElement("span"); l.className = "rail-label"; l.textContent = label;
+      a.appendChild(l);
+      return a;
+    };
+    const nav = document.createElement("nav");
+    nav.className = "chapter-rail"; nav.setAttribute("aria-label", "Chapter shortcuts");
+    const ol = document.createElement("ol");
+    chapters.forEach(c => {
+      const li = document.createElement("li");
+      c.a = link(c.mark.id, "rail-chapter", `${c.num}  ${c.title}`, c.num);
+      li.appendChild(c.a);
+      if (c.subs.length) {
+        const sub = document.createElement("ol"); sub.className = "rail-sub";
+        c.subLinks = c.subs.map(s => { const sli = document.createElement("li"); const sa = link(s.id, "rail-dot", s.textContent.trim()); sli.appendChild(sa); sub.appendChild(sli); return sa; });
+        li.appendChild(sub);
+      }
+      c.li = li; ol.appendChild(li);
+    });
+    nav.appendChild(ol);
+    document.body.appendChild(nav);
+    // Same reading line as the contents scrollspy: the last marker whose top has
+    // passed 28% of the viewport is "here"; the page bottom forces the last one.
+    const mark = () => {
+      const line = innerHeight * 0.28;
+      const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+      let cur = null;
+      for (const c of chapters) { if (c.mark.getBoundingClientRect().top <= line) cur = c; else break; }
+      if (atEnd) cur = chapters[chapters.length - 1];
+      chapters.forEach(c => {
+        const on = c === cur;
+        c.li.classList.toggle("is-active", on);
+        if (on) c.a.setAttribute("aria-current", "true"); else c.a.removeAttribute("aria-current");
+        if (c.subLinks) {
+          let sc = null;
+          if (on) for (let k = 0; k < c.subs.length; k++) { if (c.subs[k].getBoundingClientRect().top <= line) sc = k; else break; }
+          c.subLinks.forEach((sa, k) => sa.classList.toggle("is-here", on && k === sc));
+        }
+      });
+    };
+    addEventListener("scroll", mark, { passive: true });
+    addEventListener("resize", mark);
+    mark();
+    // WCAG 1.4.13: a hover/focus label must be dismissible without moving the pointer.
+    addEventListener("keydown", e => { if (e.key === "Escape") nav.classList.add("rail-quiet"); });
+    nav.addEventListener("pointerleave", () => nav.classList.remove("rail-quiet"));
+    nav.addEventListener("focusout", () => nav.classList.remove("rail-quiet"));
+  });
+
   // Copy — <button class="copy-btn" data-copy="#sel"> copies target text; or data-copy-text="literal"
   wire("copy buttons", () => {
   $$("[data-copy], [data-copy-text]").forEach(btn => btn.addEventListener("click", async () => {
@@ -269,7 +344,7 @@
       pop.style.top = (e.clientY + h + pad > innerHeight ? e.clientY - h - pad : e.clientY + pad) + "px";
     };
     $$('a[href^="#"]').forEach(a => {
-      if (a.classList.contains("hanchor") || a.closest(".toc")) return;
+      if (a.classList.contains("hanchor") || a.closest(".toc") || a.closest(".chapter-rail")) return;
       a.addEventListener("mouseenter", (e) => {
         const t = document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1)));
         if (!t) return;

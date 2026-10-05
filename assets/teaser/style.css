@@ -1,0 +1,268 @@
+/* Fonts are bundled (OFL, see assets/fonts/OFL-*.txt): no network at render. */
+@font-face { font-family: "Inter Video"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Inter Video"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Inter Video"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Inter Video"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Inter Video"; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); font-weight: 800; }
+@font-face { font-family: "JetBrains Mono Video"; src: url("assets/fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "JetBrains Mono Video"; src: url("assets/fonts/JetBrainsMono-700.woff2") format("woff2"); font-weight: 700; }
+
+/* TYPE SPEC tokens (see NOTES.md): 8 px grid, 1080p sizes */
+:root {
+  --sans: "Inter Video", system-ui, sans-serif;
+  --mono: "JetBrains Mono Video", ui-monospace, monospace;
+  --track-display: -0.022em; /* Inter dynamic metrics, sizes >= 48 px */
+  --margin: 120px;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #fbfbfa;
+}
+#root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #fbfbfa;
+  color: #1d2330;
+  font-family: var(--sans);
+}
+.abs {
+  position: absolute;
+}
+/* ---- type roles ---- */
+/* tabular figures only where digits count or stack: Inter's tnum also widens the hyphen */
+.t-display, .t-num, .tnum { font-variant-numeric: tabular-nums; }
+.t-display { font-size: 200px; line-height: 1; font-weight: 700; letter-spacing: var(--track-display); }
+.t-num { font-size: 128px; line-height: 1.125; font-weight: 700; letter-spacing: var(--track-display); }
+.t-h1 { font-size: 64px; line-height: 1.125; font-weight: 700; letter-spacing: var(--track-display); }
+.t-h2 { font-size: 48px; line-height: 1.167; font-weight: 700; letter-spacing: -0.02em; }
+.t-body { font-size: 32px; line-height: 1.25; font-weight: 600; letter-spacing: -0.011em; }
+.t-label { font-size: 24px; line-height: 1.333; font-weight: 600; letter-spacing: -0.005em; }
+.t-eyebrow { font-family: var(--mono); font-size: 24px; line-height: 1.333; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6577; }
+.mute { color: #5b6577; }
+
+/* scene area: everything above the caption band */
+#stage {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 900px;
+  overflow: hidden;
+}
+.scene {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 900px;
+  opacity: 0;
+}
+/* scene heading block: eyebrow, 16 px gap, headline */
+.head {
+  left: var(--margin);
+  top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* caption band: bottom 180 px, scene content never enters it */
+#band {
+  left: 0;
+  top: 900px;
+  width: 1920px;
+  height: 180px;
+  background: #fbfbfa;
+}
+.phrase {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+.phrase p {
+  max-width: 1300px; /* 68% of frame width (BBC), about 42 characters a line */
+  text-align: center;
+  text-wrap: balance;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: #5b6577; /* words not yet spoken */
+}
+/* shared parts */
+.card {
+  background: #ffffff;
+  border: 2px solid #d3dae4;
+  border-radius: 24px;
+  overflow: hidden;
+}
+.bar {
+  display: block;
+  height: 16px;
+  border-radius: 8px;
+  background: #d3dae4;
+  transform-origin: 0% 50%;
+}
+.chip-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #ffffff;
+}
+svg.layer {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 900px;
+  overflow: visible;
+}
+/* lanes */
+.lane-bg {
+  left: 64px;
+  width: 1816px; /* ends at 1880 px, the right edge of the last step column */
+  height: 128px;
+  transform-origin: 0% 50%;
+}
+.lane-rule {
+  left: 64px;
+  width: 1816px; /* ends at 1880 px, the right edge of the last step column */
+  height: 2px;
+  background: #d3dae4;
+  transform-origin: 0% 50%;
+}
+.lane-name {
+  left: 88px;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transform-origin: 0% 50%;
+}
+.lane-dot {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+.col-sep {
+  width: 0;
+  height: 512px;
+  border-left: 2px dashed #d3dae4;
+}
+.step-label {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5b6577;
+  white-space: nowrap;
+}
+.step-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #1d2330;
+  transform-origin: 0% 50%;
+}
+.trail path {
+  fill: none;
+  stroke: #1d2330;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.stop-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fbfbfa;
+}
+.token {
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fbfbfa;
+  padding: 5px;
+}
+.token-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #0a5fc4;
+}
+.counter {
+  right: var(--margin);
+  top: 48px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.counter .t-eyebrow,
+.counter-of {
+  padding-bottom: 24px;
+}
+.ticker {
+  width: 160px;
+  height: 144px;
+  overflow: hidden;
+}
+.tick {
+  height: 144px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+/* ui beats */
+.shot {
+  left: 176px;
+  top: 9px;
+  width: 1568px;
+  height: 882px;
+}
+.cam {
+  left: 0;
+  top: 0;
+  width: 3840px;
+  height: 2160px;
+  transform-origin: 0 0;
+}
+.cam img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3840px;
+  height: 2160px;
+}
+/* soft spotlight: a blurred dim outside the padded box, no outline */
+.spot {
+  border-radius: 28px;
+  box-shadow: 0 0 60px 6000px rgba(29, 35, 48, 0.34);
+}
+.cursor {
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 60px;
+}
+.cursor svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

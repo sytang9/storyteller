@@ -55,6 +55,17 @@ An analogy helps only when the text pairs its parts. In one classic study, 92% o
 
 ![An analogy pairs each part once and says where it breaks](docs/analogy.png)
 
+## Optional teaser video
+
+After the report is done, the skill can suggest a short narrated video for the first screen. It names the scenes
+and tells you the token cost first. It builds the video only if you say yes, and it never asks for a simple report.
+
+- The voice comes from Kokoro-82M, a free local model.
+- The real screens come from read-only browser stills, with a camera that zooms to what the voice names.
+- HyperFrames renders the motion and the captions; 75 s of video renders in about 30 s.
+
+The steps are in `references/teaser.md`, and the template is in `assets/teaser/`.
+
 ## Install
 
 Clone the repository into your Claude Code skills folder:

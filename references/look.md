@@ -14,6 +14,7 @@
 |---|---|
 | `.display` on the page title (`<h1>` via the frontmatter title stays; use `<p class="display">` for a hero line) | one oversized claim, key word in `<em>` |
 | `<p class="chapter-no">01<span>Short label</span></p>` | opens every story chapter, numbered in order |
+| (automatic) chapter rail | built from the `.chapter-no[id]` markers when a story has 3+ chapters: a fixed right-edge strip of numerals, the current one marked, its h3 sub-sections as dots, the title on hover/focus (kept visible at 1400px+). Hidden below 1100px and in print. Nothing to author; keep chapter openers numbered in order. |
 | `<div class="hero-num"><b>84 of 100</b><span>what it counts</span></div>` | the one number a chapter turns on |
 | `<div class="card-row">` with 2–4 `<div class="card">` | parallel facts (≤20 words a card) |
 | `<blockquote class="pull">` | one quotable line (≤15 words) |

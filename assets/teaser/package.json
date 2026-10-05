@@ -1,0 +1,10 @@
+{
+  "name": "storyteller-teaser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.126 preview",
+    "check": "npx --yes hyperframes@0.8.126 check",
+    "render": "npx --yes hyperframes@0.8.126 render"
+  }
+}
