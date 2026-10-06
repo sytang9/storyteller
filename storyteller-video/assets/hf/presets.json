@@ -1,0 +1,45 @@
+{
+  "_doc": "Looks for direction.json `look`. Each sets the CSS tokens in style.css; `override` in direction.json changes single tokens. Role colours keep >= 4.5:1 on bg for text (check with the contrast step in references/direction.md).",
+  "paper": {
+    "mood": "neutral, technical, default",
+    "sans": "Inter Video", "display": "Inter Video", "display-weight": 700, "display-case": "none", "mono": "JetBrains Mono Video",
+    "bg": "#fbfbfa", "surface": "#ffffff", "ink": "#1d2330", "mute": "#5b6577", "line": "#d3dae4",
+    "accent": "#0a5fc4", "on-accent": "#ffffff", "ring": "#2f7de1", "radius": "24px",
+    "blue": "#0a5fc4", "teal": "#0d6e67", "purple": "#7042c9", "orange": "#a84a0c", "good": "#0e7040"
+  },
+  "editorial": {
+    "mood": "warm, considered, a story about people or process",
+    "sans": "Inter Video", "display": "Fraunces Video", "display-weight": 600, "display-case": "none", "mono": "JetBrains Mono Video",
+    "bg": "#f5f0e8", "surface": "#fffdf8", "ink": "#1c1a17", "mute": "#6b6459", "line": "#e1d8c8",
+    "accent": "#b23a12", "on-accent": "#ffffff", "ring": "#d0521f", "radius": "6px",
+    "blue": "#2b5c8a", "teal": "#1f6b62", "purple": "#6b3f8f", "orange": "#b23a12", "good": "#3d6b2a"
+  },
+  "poster": {
+    "mood": "bold, one big claim, a launch or a warning",
+    "sans": "Inter Video", "display": "Bebas Neue Video", "display-weight": 400, "display-case": "uppercase", "mono": "JetBrains Mono Video",
+    "bg": "#f5f0e8", "surface": "#ffffff", "ink": "#1a1a1a", "mute": "#5f5f5f", "line": "#d9d0c2",
+    "accent": "#c93c3c", "on-accent": "#ffffff", "ring": "#e85d5d", "radius": "0px",
+    "blue": "#1f4fa3", "teal": "#0f6b5f", "purple": "#6a3fa0", "orange": "#c93c3c", "good": "#2d6a2d"
+  },
+  "night": {
+    "mood": "dark, focused, systems and data",
+    "sans": "Inter Video", "display": "Space Grotesk Video", "display-weight": 700, "display-case": "none", "mono": "JetBrains Mono Video",
+    "bg": "#10141c", "surface": "#1a2030", "ink": "#eef2f8", "mute": "#9aa6b8", "line": "#2e3849",
+    "accent": "#f2b544", "on-accent": "#10141c", "ring": "#f2b544", "radius": "14px",
+    "blue": "#6aa8ff", "teal": "#4fd1c0", "purple": "#b99cff", "orange": "#f2b544", "good": "#6fdc8c"
+  },
+  "forest": {
+    "mood": "calm, field work, roads and places",
+    "sans": "Inter Video", "display": "Source Serif Video", "display-weight": 700, "display-case": "none", "mono": "JetBrains Mono Video",
+    "bg": "#f2f0e6", "surface": "#fbfaf4", "ink": "#1e2a22", "mute": "#5a685d", "line": "#d5d8c6",
+    "accent": "#2f6b3f", "on-accent": "#ffffff", "ring": "#3f8a52", "radius": "10px",
+    "blue": "#2d5d7b", "teal": "#2f6b3f", "purple": "#6a4a7a", "orange": "#a3541c", "good": "#2f6b3f"
+  },
+  "blueprint": {
+    "mood": "engineering, plans, how a system is built",
+    "sans": "Plex Sans Video", "display": "Plex Sans Video", "display-weight": 700, "display-case": "none", "mono": "Plex Mono Video",
+    "bg": "#0c2d5e", "surface": "#113a74", "ink": "#f4f7ff", "mute": "#a9bde0", "line": "#2d5291",
+    "accent": "#ffd23f", "on-accent": "#0c2d5e", "ring": "#ffd23f", "radius": "4px",
+    "blue": "#8cc4ff", "teal": "#6ee0cf", "purple": "#c9b2ff", "orange": "#ffb259", "good": "#7fe39b"
+  }
+}

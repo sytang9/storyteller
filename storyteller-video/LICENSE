@@ -1,7 +1,7 @@
 MIT License
 
 Copyright (c) 2026 sytang9
-Copyright (c) 2025 Cathryn Lavery (diagram-design: scripts/drawio_extract.py, scripts/mermaid_extract.py, assets/motion.js, parts of scripts/check_svg.py)
+Copyright (c) HeyGen (HyperFrames: assets/hf/compositions/ and the press-ripple, count-up and depth-stack motion in assets/hf/), Apache-2.0, see assets/hf/LICENSE-hyperframes.txt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

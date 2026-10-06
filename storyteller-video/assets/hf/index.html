@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/CustomEase.min.js"></script>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="theme.css" />
   </head>
   <body>
     <div
@@ -25,25 +26,21 @@
     <script src="data.js"></script>
     <script>
       // ---- template constants (report-agnostic) ----
-      const C = {
-        bg: "#fbfbfa",
-        ink: "#1d2330",
-        mute: "#5b6577",
-        line: "#d3dae4",
-        blue: "#0a5fc4",
-        teal: "#0d6e67",
-        purple: "#7042c9",
-        orange: "#a84a0c",
-        good: "#0e7040",
-      };
+      // colours come from the look tokens in style.css, overridden per video by theme.css (build.py, from direction.json)
+      const TOKENS = getComputedStyle(document.documentElement);
+      const tok = (k) => TOKENS.getPropertyValue("--" + k).trim();
+      const C = Object.fromEntries(
+        ["bg", "surface", "ink", "mute", "line", "accent", "blue", "teal", "purple", "orange", "good"].map((k) => [k, tok(k)]),
+      );
+      C.onAccent = tok("on-accent");
       gsap.registerPlugin(CustomEase);
       // motion vocabulary (Material 3 shapes): entrances decelerate, exits accelerate, moves use the emphasized curve
       const ENTER = CustomEase.create("enter", "0.05,0.7,0.1,1");
       const EXIT = CustomEase.create("exit", "0.3,0,0.8,0.15");
       const MOVE = CustomEase.create("move", "0.2,0,0,1");
       const LEAD = 0.3; // a visual change lands this long before the word it illustrates
-      const EXIT_DUR = 0.3; // the outgoing scene leaves (ease-in) before the boundary...
-      const ENTER_DUR = 0.4; // ...and the next enters after it: two scenes never dissolve into each other
+      const EXIT_DUR = 0.3; // "calm" transition: the outgoing scene leaves (ease-in) before the boundary...
+      const ENTER_DUR = 0.4; // ...and the next enters after it
       const D = window.TEASER;
       // the free area a scene body is fitted into (the assembly below); scenes may read it to pick a layout
       const IS_FULL = D.captions === "full";
@@ -103,7 +100,7 @@
       //   until: the label leaves on that word (when the state it names stops being true)
       const keyLabel = (root, b, l, x = l.x, y = l.y) => {
         const n = el("div", "abs key-label " + (l.kind === "tag" ? "tag" : "plain"), root, { left: x + "px", top: y + "px" }, l.text);
-        if (l.color && l.kind !== "tag") n.style.color = col(l.color);
+        if (l.color) l.kind === "tag" ? (n.style.background = col(l.color)) : (n.style.color = col(l.color));
         const w = Array.isArray(l.word) ? l.word : [l.word];
         const xp = { center: -50, right: -100 }[l.align] || 0; // xPercent keeps the alignment while GSAP moves y
         tl.set(n, { xPercent: xp, opacity: 0, y: 12 }, 0);
@@ -138,6 +135,7 @@
 
     </script>
     <script src="scenes.js"></script>
+    <script src="scenes-extra.js"></script>
     <script src="ui.js"></script>
     <!-- CUSTOM:START -->
     <!-- CUSTOM:END -->
@@ -162,8 +160,8 @@
       }
       function fitTransform(box, mode) {
         if (!(box.x0 < box.x1)) return "";
-        const isUi = mode === "ui";
-        const top = isUi ? UI_MARGIN : FIT_TOP;
+        const isUi = mode === "ui" || mode === "ui-head";
+        const top = mode === "ui" ? UI_MARGIN : FIT_TOP;
         const bottom = isUi ? FRAME_H - UI_MARGIN : FIT_BOTTOM;
         const left = isUi ? UI_MARGIN : FIT_X;
         const bw = box.x1 - box.x0;
@@ -181,6 +179,36 @@
       heroLayer.style.height = FRAME_H + "px";
       if (!IS_FULL) document.getElementById("band").style.display = "none";
       const bodies = [];
+      const roots = [];
+      // the transition into a beat (beat.in, default from direction.json). The grammar lives in direction.md:
+      // one primary kind for most cuts, one or two accents for chapter changes and the payoff.
+      //   calm: the old scene exits, then the new one enters (no overlap)    fade: a short crossfade
+      //   cut: a hard cut on the boundary    push: the new scene pushes the old one left (the story moves on)
+      //   zoom: zoom through the old scene into the new one (a new chapter)    wipe: the new scene wipes in left to right
+      const T = { fade: 0.5, push: 0.7, zoom: 0.6, wipe: 0.6 };
+      function transition(prev, root, at, kind) {
+        const hide = { opacity: 0, duration: 0.01 };
+        if (kind === "cut") {
+          tl.set(prev, { opacity: 0 }, at);
+          tl.set(root, { opacity: 1 }, at);
+        } else if (kind === "fade") {
+          tl.to(prev, { opacity: 0, duration: T.fade, ease: "power1.inOut" }, at - T.fade / 2);
+          tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: T.fade, ease: "power1.inOut", immediateRender: false }, at - T.fade / 2);
+        } else if (kind === "push") {
+          tl.to(prev, { x: -1920, duration: T.push, ease: MOVE }, at - T.push / 2);
+          tl.set(prev, { opacity: 0 }, at + T.push / 2);
+          tl.fromTo(root, { opacity: 1, x: 1920 }, { x: 0, duration: T.push, ease: MOVE, immediateRender: false }, at - T.push / 2);
+        } else if (kind === "zoom") {
+          tl.to(prev, { scale: 1.6, opacity: 0, duration: T.zoom, ease: EXIT, transformOrigin: "50% 45%" }, at - T.zoom / 2);
+          tl.fromTo(root, { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: T.zoom, ease: ENTER, transformOrigin: "50% 45%", immediateRender: false }, at - T.zoom / 4);
+        } else if (kind === "wipe") {
+          tl.fromTo(root, { opacity: 1, clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: T.wipe, ease: MOVE, immediateRender: false }, at - T.wipe / 2);
+          tl.to(prev, hide, at + T.wipe / 2);
+        } else {
+          tl.to(prev, { opacity: 0, duration: EXIT_DUR, ease: EXIT }, at - EXIT_DUR);
+          tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ENTER_DUR, ease: ENTER, immediateRender: false }, at);
+        }
+      }
       D.beats.forEach((b, i) => {
         const next = D.beats[i + 1];
         const root = el("div", "abs scene", stage, { height: FRAME_H + "px" });
@@ -192,11 +220,10 @@
         if (b.kind !== "ui") (b.scene.labels || []).forEach((l) => keyLabel(root, b, l));
         const body = el("div", "abs scene-body", root, { height: FRAME_H + "px" });
         [...root.children].filter((n) => n !== body && !n.classList.contains("head")).forEach((n) => body.appendChild(n));
-        bodies.push({ b, body, group: b.scene.hero || b.id, fit: b.kind === "ui" ? "ui" : root.dataset.fit || "fit" });
-        // exit, then enter: the outgoing scene leaves before the boundary, the next one enters after it
+        bodies.push({ b, body, group: b.scene.hero || b.id, fit: b.kind === "ui" ? (b.scene.eyebrow || b.scene.title ? "ui-head" : "ui") : root.dataset.fit || "fit" });
+        roots.push(root);
         if (i === 0) tl.set(root, { opacity: 1 }, 0);
-        else tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ENTER_DUR, ease: ENTER, immediateRender: false }, b.start);
-        if (next) tl.to(root, { opacity: 0, duration: EXIT_DUR, ease: EXIT }, next.start - EXIT_DUR);
+        else transition(roots[i - 1], root, b.start, b.in);
         // a hero (and its props) leaves with the last beat that names it
         const h = b.scene && b.scene.hero;
         if (h && next && (next.scene || {}).hero !== h) tl.to(HEROES[h].group, { opacity: 0, duration: EXIT_DUR, ease: EXIT }, next.start - EXIT_DUR);
@@ -225,7 +252,7 @@
             const w = b.words[k];
             if (j) para.appendChild(document.createTextNode(" "));
             const span = el("span", "", para, {}, w.w);
-            tl.set(span, { color: C.blue }, w.s - CAPTION_LEAD);
+            tl.set(span, { color: C.accent }, w.s - CAPTION_LEAD);
             tl.set(span, { color: C.ink }, w.e - CAPTION_LEAD);
           });
           tl.set(box, { opacity: 1 }, p.show);

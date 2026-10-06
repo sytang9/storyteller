@@ -94,11 +94,10 @@ build and the layout check once at the end. For a new story that leaves the team
 we are, what is unknown, what happens next, and which chapter it could skip. Fix only what it gets
 wrong; skip the test for revisions and internal pages.
 
-## Optional teaser video: suggest, ask, then build
+## Optional video: suggest, ask, then hand off
 
-After delivery, if the story has a mechanism that moves or a real screen the reader must picture, suggest a
-narrated teaser that frames the report. Name 2-4 scenes and offer two levels with their costs: template scenes
-(4-9M tokens, 12-25 min) or bespoke scenes (about 19M, 50 min). Build only on a yes, and never suggest it for a
-short or simple report. Steps and the script checklist: `references/teaser.md`.
+After delivery, if the story has a mechanism that moves or a real screen the reader must picture, offer a narrated
+video that frames the report. Name 2-4 scenes and give the two levels and costs from the `storyteller-video` skill.
+Never suggest it for a short or simple report. Build only on a yes, with that skill.
 
 Deliver the local file and its served link (`path2url` if the user has one). Never an Artifact.

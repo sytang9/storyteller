@@ -7,12 +7,46 @@
 @font-face { font-family: "JetBrains Mono Video"; src: url("assets/fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; }
 @font-face { font-family: "JetBrains Mono Video"; src: url("assets/fonts/JetBrainsMono-700.woff2") format("woff2"); font-weight: 700; }
 
+/* look fonts (presets.json), all OFL */
+@font-face { font-family: "Fraunces Video"; src: url("assets/fonts/fraunces-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Fraunces Video"; src: url("assets/fonts/fraunces-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Bebas Neue Video"; src: url("assets/fonts/bebas-neue-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Space Grotesk Video"; src: url("assets/fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Space Grotesk Video"; src: url("assets/fonts/space-grotesk-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Source Serif Video"; src: url("assets/fonts/source-serif-4-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Source Serif Video"; src: url("assets/fonts/source-serif-4-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Plex Sans Video"; src: url("assets/fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Plex Sans Video"; src: url("assets/fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Plex Sans Video"; src: url("assets/fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Plex Sans Video"; src: url("assets/fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Plex Mono Video"; src: url("assets/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Plex Mono Video"; src: url("assets/fonts/ibm-plex-mono-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+
 /* TYPE SPEC tokens (see NOTES.md): 8 px grid, 1080p sizes */
 :root {
   --sans: "Inter Video", system-ui, sans-serif;
   --mono: "JetBrains Mono Video", ui-monospace, monospace;
   --track-display: -0.022em; /* Inter dynamic metrics, sizes >= 48 px */
   --margin: 120px;
+  /* look tokens: the "paper" preset. build.py writes theme.css from direction.json, which overrides these */
+  --display: var(--sans);
+  --display-weight: 700;
+  --display-case: none;
+  --bg: var(--bg);
+  --surface: #ffffff;
+  --ink: var(--ink);
+  --mute: var(--mute);
+  --line: var(--line);
+  --accent: var(--accent);
+  --on-accent: #ffffff;
+  --ring: var(--ring);
+  --radius: 24px;
+  /* role colours: the data names these keys (blue = the accent by default) */
+  --blue: #0a5fc4;
+  --teal: #0d6e67;
+  --purple: #7042c9;
+  --orange: #a84a0c;
+  --good: #0e7040;
 }
 * {
   margin: 0;
@@ -24,15 +58,15 @@ body {
   width: 1920px;
   height: 1080px;
   overflow: hidden;
-  background: #fbfbfa;
+  background: var(--bg);
 }
 #root {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #fbfbfa;
-  color: #1d2330;
+  background: var(--bg);
+  color: var(--ink);
   font-family: var(--sans);
 }
 .abs {
@@ -41,14 +75,14 @@ body {
 /* ---- type roles ---- */
 /* tabular figures only where digits count or stack: Inter's tnum also widens the hyphen */
 .t-display, .t-num, .tnum { font-variant-numeric: tabular-nums; }
-.t-display { font-size: 200px; line-height: 1; font-weight: 700; letter-spacing: var(--track-display); }
-.t-num { font-size: 128px; line-height: 1.125; font-weight: 700; letter-spacing: var(--track-display); }
-.t-h1 { font-size: 64px; line-height: 1.125; font-weight: 700; letter-spacing: var(--track-display); }
-.t-h2 { font-size: 48px; line-height: 1.167; font-weight: 700; letter-spacing: -0.02em; }
+.t-display { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 200px; line-height: 1; letter-spacing: var(--track-display); }
+.t-num { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 128px; line-height: 1.125; letter-spacing: var(--track-display); }
+.t-h1 { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 64px; line-height: 1.125; letter-spacing: var(--track-display); }
+.t-h2 { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 48px; line-height: 1.167; letter-spacing: -0.02em; }
 .t-body { font-size: 32px; line-height: 1.25; font-weight: 600; letter-spacing: -0.011em; }
 .t-label { font-size: 24px; line-height: 1.333; font-weight: 600; letter-spacing: -0.005em; }
-.t-eyebrow { font-family: var(--mono); font-size: 24px; line-height: 1.333; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6577; }
-.mute { color: #5b6577; }
+.t-eyebrow { font-family: var(--mono); font-size: 24px; line-height: 1.333; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
+.mute { color: var(--mute); }
 
 /* scene area: everything above the caption band */
 #stage {
@@ -79,7 +113,7 @@ body {
   top: 900px;
   width: 1920px;
   height: 180px;
-  background: #fbfbfa;
+  background: var(--bg);
 }
 .phrase {
   left: 0;
@@ -99,20 +133,20 @@ body {
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.015em;
-  color: #5b6577; /* words not yet spoken */
+  color: var(--mute); /* words not yet spoken */
 }
 /* shared parts */
 .card {
-  background: #ffffff;
-  border: 2px solid #d3dae4;
-  border-radius: 24px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .bar {
   display: block;
   height: 16px;
   border-radius: 8px;
-  background: #d3dae4;
+  background: var(--line);
   transform-origin: 0% 50%;
 }
 .chip-tag {
@@ -124,7 +158,7 @@ body {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0;
-  color: #ffffff;
+  color: var(--on-accent);
 }
 svg.layer {
   left: 0;
@@ -144,7 +178,7 @@ svg.layer {
   left: 64px;
   width: 1816px; /* ends at 1880 px, the right edge of the last step column */
   height: 2px;
-  background: #d3dae4;
+  background: var(--line);
   transform-origin: 0% 50%;
 }
 .lane-name {
@@ -164,25 +198,25 @@ svg.layer {
 .col-sep {
   width: 0;
   height: 512px;
-  border-left: 2px dashed #d3dae4;
+  border-left: 2px dashed var(--line);
 }
 .step-label {
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #5b6577;
+  color: var(--mute);
   white-space: nowrap;
 }
 .step-bar {
   height: 6px;
   border-radius: 3px;
-  background: #1d2330;
+  background: var(--ink);
   transform-origin: 0% 50%;
 }
 .trail path {
   fill: none;
-  stroke: #1d2330;
+  stroke: var(--ink);
   stroke-width: 4;
   stroke-linecap: round;
 }
@@ -190,7 +224,7 @@ svg.layer {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 3px solid #fbfbfa;
+  border: 3px solid var(--bg);
 }
 .token {
   left: 0;
@@ -198,14 +232,14 @@ svg.layer {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #fbfbfa;
+  background: var(--bg);
   padding: 5px;
 }
 .token-core {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #0a5fc4;
+  background: var(--accent);
 }
 .counter {
   right: var(--margin);
@@ -251,7 +285,7 @@ svg.layer {
 /* the box outline: thin, rounded, accent. This lighter blue keeps >= 3:1 on white and on dark UI (#23272e),
    so it marks the box where the dim alone does not show */
 .ring {
-  border: 3px solid #2f7de1;
+  border: 3px solid var(--ring);
   border-radius: 16px; /* RING_R in ui.js */
 }
 .cursor {
@@ -282,23 +316,23 @@ svg.layer {
   font-weight: 700;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  color: #1d2330;
+  color: var(--ink);
 }
 /* over a screenshot the label needs its own ground */
 .key-label.tag {
   padding: 8px 20px;
   border-radius: 8px;
-  background: #1d2330;
-  color: #ffffff;
+  background: var(--ink);
+  color: var(--bg);
 }
 /* chips with focus: the rest stay quiet */
 .dim-chip {
   display: flex;
   align-items: center;
   padding: 0 24px;
-  border: 2px solid #d3dae4;
-  border-radius: 16px;
-  color: #5b6577;
+  border: 2px solid var(--line);
+  border-radius: calc(var(--radius) * 0.67);
+  color: var(--mute);
   white-space: nowrap;
 }
 .hero-group,
@@ -311,6 +345,6 @@ svg.layer {
 /* ui label leader: from the highlighted block's edge down to its label in the lane */
 .ui-leader {
   width: 2px;
-  background: #1d2330;
+  background: var(--ink);
   transform-origin: 50% 0%;
 }

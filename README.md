@@ -55,16 +55,18 @@ An analogy helps only when the text pairs its parts. In one classic study, 92% o
 
 ![An analogy pairs each part once and says where it breaks](docs/analogy.png)
 
-## Optional teaser video
+## Optional video: storyteller-video
 
-After the report is done, the skill can suggest a short narrated video for the first screen. It names the scenes
-and tells you the token cost first. It builds the video only if you say yes, and it never asks for a simple report.
+After the report is done, the skill can suggest a short narrated video that frames it. It names the scenes and
+tells you the token cost first. The companion skill in `storyteller-video/` builds the video only if you say yes,
+and it never suggests one for a simple report.
 
 - The voice comes from Kokoro-82M, a free local model.
-- The real screens come from read-only browser stills, with a camera that zooms to what the voice names.
-- HyperFrames renders the motion and the captions; 75 s of video renders in about 30 s.
-
-The steps are in `references/teaser.md`, and the template is in `assets/teaser/`.
+- A direction step picks one of six looks, a set of transitions, and a picture for each idea. A check stops a
+  video whose scenes, pace or cuts all look the same.
+- Scenes include large statements, before-and-after panels, diagrams that draw themselves, and layers in 3D.
+- Real screens come from read-only browser stills, with a camera that zooms to what the voice names.
+- HyperFrames renders the motion and the captions; a 30 s draft renders in about 20 s.
 
 ## Install
 
@@ -72,6 +74,7 @@ Clone the repository into your Claude Code skills folder:
 
 ```bash
 git clone https://github.com/sytang9/storyteller ~/.claude/skills/storyteller
+ln -s ~/.claude/skills/storyteller/storyteller-video ~/.claude/skills/storyteller-video   # optional video skill
 pip install beautifulsoup4 markdown playwright
 python3 -m playwright install chromium
 ```

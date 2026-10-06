@@ -31,7 +31,7 @@ function toolCards(parent, items, tag, small) {
 //   hero: the tool cards live in the hero's layer, so a following merge with the same hero folds these same cards
 const PAPER = { w: 210, h: 280 };
 function paperSheet(parent, src, x, y) {
-  const p = el("div", "abs", parent, { left: x + "px", top: y + "px", width: PAPER.w + "px", height: PAPER.h + "px", background: "#ffffff", border: `3px solid ${C.ink}`, borderRadius: "8px", transformOrigin: "50% 50%" });
+  const p = el("div", "abs", parent, { left: x + "px", top: y + "px", width: PAPER.w + "px", height: PAPER.h + "px", background: C.surface, border: `3px solid ${C.ink}`, borderRadius: "8px", transformOrigin: "50% 50%" });
   el("div", "abs t-h2", p, { left: "24px", top: "24px" }, src.title);
   el("div", "abs t-label mute", p, { left: "24px", top: "88px" }, src.sub);
   [0.8, 0.6, 0.7, 0.5].forEach((w, k) => el("span", "abs bar", p, { left: "24px", top: 144 + k * 32 + "px", width: 160 * w + "px", height: "12px" }));
@@ -71,7 +71,7 @@ function sceneRetype(root, b) {
     const t = tools[i];
     // the card fills in line by line: the retyping itself
     t.bars.forEach((bar, k) =>
-      tl.fromTo(bar, { scaleX: 0, backgroundColor: C.line }, { scaleX: 1, backgroundColor: "#9aa5b6", duration: 0.2, ease: ENTER, immediateRender: false }, at + k * 0.1),
+      tl.fromTo(bar, { scaleX: 0, backgroundColor: C.line }, { scaleX: 1, backgroundColor: C.mute, duration: 0.2, ease: ENTER, immediateRender: false }, at + k * 0.1),
     );
     if (t.tag) popIn(t.tag, at - 0.05, { opacity: 0, y: 0, scale: 0.6 });
   });
@@ -134,10 +134,10 @@ function addSteps(job, b, s) {
   const fill = el("span", "abs", job, { left: x0 + "px", top: RAIL_Y + "px", width: dx * (k - 1) + "px", height: "6px", background: C.good, display: "block", transformOrigin: "0% 50%" });
   const nodes = s.steps.map((name, i) => {
     const g = el("div", "abs", job, { left: x0 + i * dx - 112 + "px", top: RAIL_Y - 41 + "px", width: "224px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" });
-    const dot = el("div", "t-h2", g, { position: "relative", width: "88px", height: "88px", borderRadius: "50%", background: C.blue, color: "#ffffff" });
+    const dot = el("div", "t-h2", g, { position: "relative", width: "88px", height: "88px", borderRadius: "50%", background: C.blue, color: C.onAccent });
     const num = el("div", "abs", dot, { inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }, String(i + 1));
     const tick = svgEl("svg", dot, { viewBox: "0 0 24 24", style: "position:absolute;left:22px;top:22px;width:44px;height:44px" });
-    svgEl("path", tick, { d: "M5 12.5 L9.5 17 L19 7.5", fill: "none", stroke: "#ffffff", "stroke-width": 3.4, "stroke-linecap": "round", "stroke-linejoin": "round" });
+    svgEl("path", tick, { d: "M5 12.5 L9.5 17 L19 7.5", fill: "none", stroke: C.onAccent, "stroke-width": 3.4, "stroke-linecap": "round", "stroke-linejoin": "round" });
     el("div", "t-body", g, { whiteSpace: "nowrap" }, name);
     return { g, dot, num, tick };
   });
@@ -408,7 +408,7 @@ function stepEcho(card, b, st) {
   tl.to(bar, { scaleX: 1, duration: Math.max(0.3, z - a), ease: MOVE }, a);
   for (let i = st.from - 1; i < st.to; i++) {
     const t = a + ((z - a) * (i - st.from + 1)) / Math.max(1, st.to - st.from);
-    tl.to(dots[i], { backgroundColor: C.orange, borderColor: C.orange, color: "#ffffff", duration: 0.2, ease: ENTER }, t);
+    tl.to(dots[i], { backgroundColor: C.orange, borderColor: C.orange, color: C.onAccent, duration: 0.2, ease: ENTER }, t);
   }
 }
 

@@ -3,6 +3,8 @@
 Needs Python 3.10-3.12 with `pip install "kokoro>=0.9.4" soundfile` (Apache-2.0 weights, runs on CPU or GPU)."""
 import json, re, sys
 from pathlib import Path
+if len(sys.argv) < 2:  # before the heavy imports: kokoro loads torch for minutes
+    sys.exit(__doc__)
 import numpy as np, soundfile as sf
 from kokoro import KPipeline
 VOICE = sys.argv[2] if len(sys.argv) > 2 else "af_heart"

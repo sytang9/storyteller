@@ -37,6 +37,8 @@ const RING_R = 16; // corner radius of the outline and of the dim's hole, in car
 const SPOT_BLUR = 40; // the dim's soft edge, in card pixels at the settled view
 function sceneUi(root, b) {
   const u = b.ui;
+  // an optional heading names the screen for a viewer with the sound off; the fit then keeps the still below it
+  if (b.scene.eyebrow || b.scene.title) head(root, b.scene.eyebrow, b.scene.title);
   const [sw, sh] = u.size; // the still's own pixels: any resolution and aspect
   const shot = el("div", "abs card shot", root);
   const cam = el("div", "abs cam", shot, { width: sw + "px", height: sh + "px" });
@@ -85,7 +87,8 @@ function pressRipple(parent, x, y, pressAt) {
   const cur = el("div", "abs cursor", parent, { left: (-5 / 24) * 60 + "px", top: (-3 / 24) * 60 + "px", transformOrigin: `${(5 / 24) * 60}px ${(3 / 24) * 60}px` });
   cur.setAttribute("data-layout-allow-overflow", ""); // parks off-card before and after the press
   const svg = svgEl("svg", cur, { viewBox: "0 0 24 24" });
-  svgEl("path", svg, { d: "M5 3 L5 19 L9 15 L12 22 L15 20.5 L11.5 14 L18 14 Z", fill: "#ffffff", stroke: C.ink, "stroke-width": 1.4, "stroke-linejoin": "round" });
+  // the cursor sits on a screenshot, not on the theme ground: it keeps fixed colours
+  svgEl("path", svg, { d: "M5 3 L5 19 L9 15 L12 22 L15 20.5 L11.5 14 L18 14 Z", fill: "#ffffff", stroke: "#1d2330", "stroke-width": 1.4, "stroke-linejoin": "round" });
   const lx = x + 3;
   const ly = y + 4;
   tl.fromTo(cur, { x: SHOT_W * 1.08, y: SHOT_H * 1.1 }, { x: lx, y: ly, duration: 0.45, ease: ENTER, immediateRender: false }, pressAt - 0.6);

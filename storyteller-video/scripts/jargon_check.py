@@ -7,7 +7,7 @@ Each caption sentence prints with [word:tag] marks:
   R  a rare word (Zipf < 3.0)            C  a word to look at (Zipf 3.0-3.8; not counted)
 R and C need `pip install wordfreq`; without it only A and T are flagged, so lean on the cold read.
 Pass: no sentence brings 2+ new names, at most 5 distinct new names, every sentence 20 words or fewer.
-A name is new at its first use; adjacent flagged words count as one name ("Sebut Harga").
+A name is new at its first use; adjacent flagged words count as one name ("New York").
 """
 import json
 import re
@@ -52,7 +52,7 @@ def main(beats_file, terms_file=None):
                     j = i
                     while j + 1 < len(toks) and marks[j + 1] in ("A", "T", "R") and not toks[j].endswith(","):
                         j += 1
-                    names.add(" ".join(toks[i:j + 1]).strip(".,?!:;").lower())
+                    names.add(re.sub(r"['’]s$", "", " ".join(toks[i:j + 1]).strip(".,?!:;").lower()))  # "Acme's" = "Acme"
                     i = j + 1
                 else:
                     i += 1
