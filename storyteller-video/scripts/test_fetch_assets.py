@@ -50,7 +50,8 @@ def net(monkeypatch):
                 return FakeResp(body if isinstance(body, bytes) else json.dumps(body).encode(), ctype)
         raise urllib.error.URLError(f"no route for {url}")
 
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(fa._opener, "open", urlopen)  # the downloader's opener (it re-checks every redirect)
+    monkeypatch.setattr(fa, "check_public", lambda url: None)  # fake hosts do not resolve; tested on its own below
     monkeypatch.setattr(fa.time, "sleep", lambda s: None)
     return routes, asked
 
@@ -255,3 +256,17 @@ def test_collect_media_refuses_a_closed_licence_or_changed_file(tmp_path):
     (src / "media/fix.jpg").write_bytes(b"other")
     with pytest.raises(SystemExit):
         mb.collect_media(src, out=tmp_path / "hf")
+
+
+def test_only_public_https_urls_are_fetched():
+    for bad in ("http://example.com/a.png", "ftp://example.com/a", "https://127.0.0.1/a.png", "https://10.0.0.5/x",
+                "https://169.254.169.254/latest/meta-data", "https://[::1]/x"):
+        with pytest.raises(fa.FetchError):
+            fa.check_public(bad)
+
+
+def test_sanitizer_drops_style_and_mixed_urls():
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h1" '
+           'style="position:fixed;inset:0;width:100vw" fill="url(#a) url(http://evil/p)"/></svg>')
+    out = mb.sanitize_svg(svg)
+    assert "style=" not in out and "evil" not in out

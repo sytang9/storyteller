@@ -14,7 +14,9 @@ import hashlib
 import html
 import json
 import os
+import ipaddress
 import re
+import socket
 import sys
 import time
 import urllib.error
@@ -34,6 +36,7 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # the id becomes a file name
 ICON_RE = re.compile(r"^[a-z0-9-]+:[a-z0-9-]+$")
 TIMEOUT = 30  # s per request
 MAX_BYTES = 15 * 1024 * 1024
+SVG_MAX_BYTES = 1024 * 1024  # an icon is a few kB; a larger one is not an icon
 CANDIDATES = 20  # Openverse results read per asset
 ICON_SEARCH_LIMIT = 64
 GAP = {"api.openverse.org": 3.1}  # s between calls; Openverse allows 20/min without a key
@@ -59,20 +62,47 @@ def _polite(host: str) -> None:
     _last_call[host] = time.monotonic()
 
 
-def http_get(url: str) -> tuple[bytes, str]:
+def check_public(url: str) -> None:
+    """Download URLs come from third-party API results: only https, and never a private, loopback or link-local host
+    (the fetch must not reach the local network, a tailnet or a cloud metadata address)."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname:
+        raise FetchError(f"{url}: only https URLs are fetched")
+    try:
+        addrs = {info[4][0] for info in socket.getaddrinfo(parts.hostname, 443)}
+    except OSError as e:
+        raise FetchError(f"{url}: cannot resolve {parts.hostname}: {e}") from e
+    for a in addrs:
+        ip = ipaddress.ip_address(a.split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            raise FetchError(f"{url}: {parts.hostname} resolves to a non-public address ({ip})")
+
+
+class _CheckedRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        check_public(newurl)  # every hop, not only the first URL
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_opener = urllib.request.build_opener(_CheckedRedirect)
+
+
+def http_get(url: str, limit: int = None) -> tuple[bytes, str]:
     """(body, content type). Any network or HTTP problem becomes a FetchError that names the URL."""
+    limit = limit or MAX_BYTES
+    check_public(url)
     _polite(urllib.parse.urlsplit(url).hostname or "")
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            body = resp.read(MAX_BYTES + 1)
+        with _opener.open(req, timeout=TIMEOUT) as resp:
+            body = resp.read(limit + 1)
             ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
     except urllib.error.HTTPError as e:
         raise FetchError(f"HTTP {e.code} from {url}") from e
     except OSError as e:  # URLError, timeouts, resets
         raise FetchError(f"network error on {url}: {getattr(e, 'reason', e)}") from e
-    if len(body) > MAX_BYTES:
-        raise FetchError(f"{url} is larger than {MAX_BYTES} bytes")
+    if len(body) > limit:
+        raise FetchError(f"{url} is larger than {limit} bytes")
     return body, ctype
 
 
@@ -126,7 +156,7 @@ def fetch_icon(item: dict, sets: dict) -> tuple[bytes, str, dict]:
     set_name = info.get("name", prefix)
     set_name = set_name if "icon" in set_name.lower() else set_name + " icons"  # "Tabler Icons", "Lucide icons"
     url = f"{ICONIFY}/{prefix}/{name}.svg"
-    body, _ = http_get(url)
+    body, _ = http_get(url, limit=SVG_MAX_BYTES)
     try:
         sanitize_svg(body.decode())
     except (ValueError, UnicodeDecodeError) as e:
@@ -141,7 +171,7 @@ def fetch_icon(item: dict, sets: dict) -> tuple[bytes, str, dict]:
 # ---- photos and illustrations ----
 def openverse(item: dict):
     # filter at the source so all CANDIDATES are usable (unfiltered, 15 of 20 road photos were BY-NC-ND);
-    # pick_image still gates each result, in case an upstream licence label drifts
+    # pick_images still gates each result, in case an upstream licence label drifts
     params = {"q": item["query"], "page_size": CANDIDATES, "mature": "false", "license": OPENVERSE_LICENCES}
     if item["kind"] == "illustration":
         params["category"] = "illustration"
@@ -150,7 +180,7 @@ def openverse(item: dict):
         label = (code.upper() if code in ("cc0", "pdm") else "CC " + code.upper()) + (" " + version if version else "")
         yield {"source": "openverse", "title": r.get("title") or "Untitled", "author": r.get("creator") or "unknown",
                "author_url": r.get("creator_url"), "license": label, "license_url": r.get("license_url"),
-               "source_url": r.get("foreign_landing_url"), "download_url": r["url"],
+               "source_url": r.get("foreign_landing_url"), "download_url": r.get("url"),
                "tags": [t.get("name", "") for t in r.get("tags") or []]}
 
 
@@ -161,39 +191,58 @@ def commons(item: dict):
               "iiprop": "url|extmetadata", "iiurlwidth": 1920}
     pages = get_json(COMMONS, params).get("query", {}).get("pages", {})
     for p in sorted(pages.values(), key=lambda p: p.get("index", 0)):
-        info = p["imageinfo"][0]
+        info = (p.get("imageinfo") or [{}])[0]
+        if not (info.get("thumburl") or info.get("url")):
+            continue  # a malformed page must not end the search
         meta = lambda k: _text(info.get("extmetadata", {}).get(k, {}).get("value", ""))
         yield {"source": "commons", "title": meta("ObjectName") or p["title"].removeprefix("File:"),
                "author": meta("Artist") or "unknown", "author_url": None, "license": meta("LicenseShortName"),
-               "license_url": meta("LicenseUrl") or None, "source_url": info["descriptionurl"],
-               "download_url": info.get("thumburl") or info["url"], "tags": []}
+               "license_url": meta("LicenseUrl") or None, "source_url": info.get("descriptionurl"),
+               "download_url": info.get("thumburl") or info.get("url"), "tags": []}
 
 
-def pick_image(item: dict, rejected: list) -> dict:
+def pick_images(item: dict, rejected: list):
     """The open candidate whose title (counted twice) and tags share the most words with the query; API order breaks
     ties. Keyword overlap is a weak relevance signal: look at the pick before it ships (references/media.md)."""
     words = set(re.findall(r"\w+", item["query"].lower()))
     hits = lambda text: len(words & set(re.findall(r"\w+", text.lower())))
     score = lambda c: 2 * hits(c["title"]) + hits(" ".join(c["tags"]))
+    any_passed = False
     for search in (openverse, commons):
         passed = []
-        for c in search(item):
+        try:
+            found = list(search(item))
+        except FetchError as e:  # a rate limit or outage on one source falls through to the next
+            rejected.append({"id": item["id"], "title": "", "source_url": None, "license": "", "reason": f"{search.__name__}: {e}"})
+            continue
+        for c in found:
+            if not c.get("download_url"):
+                continue
             ok, why = gate(c["license"])
             if ok:
                 passed.append(c)
             else:
                 rejected.append({"id": item["id"], "title": c["title"], "source_url": c["source_url"],
                                  "license": licence_code(c["license"]), "reason": why})
-        if passed:
-            return max(passed, key=score)
-    raise FetchError(f"no open-licence {item['kind']} for {item['query']!r} on Openverse or Commons")
+        any_passed = any_passed or bool(passed)
+        yield from sorted(passed, key=score, reverse=True)  # lazily: Commons is asked only if no Openverse pick downloads
+    if not any_passed:
+        raise FetchError(f"no open-licence {item['kind']} for {item['query']!r} on Openverse or Commons")
 
 
 def fetch_image(item: dict, rejected: list) -> tuple[bytes, str, dict]:
-    c = pick_image(item, rejected)
-    body, ctype = http_get(c["download_url"])
-    if ctype not in IMAGE_TYPES:
-        raise FetchError(f"{c['download_url']} returned {ctype or 'no content type'}, not an image")
+    errors = []
+    for c in pick_images(item, rejected):  # best first; a dead link or a non-image tries the next candidate
+        try:
+            body, ctype = http_get(c["download_url"])
+        except FetchError as e:
+            errors.append(str(e))
+            continue
+        if ctype in IMAGE_TYPES:
+            break
+        errors.append(f"{c['download_url']} returned {ctype or 'no content type'}, not an image")
+    else:
+        raise FetchError(f"no candidate for {item['id']!r} downloaded: " + "; ".join(errors[:3]))
     c.pop("tags")
     c["attribution_required"] = gate(c["license"])[1] == "by"
     c["credit_text"] = f'"{c["title"]}" by {c["author"]}, {c["license"]}'
@@ -208,7 +257,7 @@ def load_items(path: Path) -> list:
     seen = set()
     for i, it in enumerate(items):
         where = f"{path} item {i}"
-        if not isinstance(it, dict) or not ID_RE.match(str(it.get("id", ""))) or it["id"] in seen:
+        if not isinstance(it, dict) or not ID_RE.fullmatch(str(it.get("id", ""))) or it["id"] in seen:
             raise SystemExit(f"{where}: id must be a unique slug [a-z0-9_-]")
         if it.get("kind") not in KINDS:
             raise SystemExit(f"{where}: kind must be one of {sorted(KINDS)}")

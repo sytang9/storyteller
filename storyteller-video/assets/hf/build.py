@@ -18,7 +18,7 @@ import re
 import shutil
 from pathlib import Path
 
-from media_build import collect_media
+from media_build import collect_media, gate
 
 HOLD = 0.35  # default silence after a beat's voice (s); a beat or direction.json "hold" overrides it
 TRANSITIONS = {"calm", "fade", "cut", "push", "zoom", "wipe", "morph"}  # index.html applies them at the boundary
@@ -102,6 +102,35 @@ def copy_module(scene, base):
     return "custom/" + name
 
 
+SAFE_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")  # beat ids become file names and HTML attributes
+TOKEN_KEY = re.compile(r"[a-z][a-z0-9-]*")
+# token values go into a stylesheet: only colours, lengths, plain keywords, and font names from style.css
+TOKEN_VALUE = re.compile(r"#[0-9a-fA-F]{3,8}|-?\d+(\.\d+)?(px|em|rem|%)?|[a-z-]+|[A-Za-z0-9 ]+")
+FONT_KEYS = {"sans", "display", "mono", "num"}
+
+
+def check_tokens(tokens):
+    """direction.json is written from report data, so a token may not carry CSS of its own (a "}" or url())."""
+    fonts = set(re.findall(r'@font-face \{ font-family: "([^"]+)"', (HERE / "style.css").read_text()))
+    for k, v in tokens.items():
+        if not TOKEN_KEY.fullmatch(k) or not TOKEN_VALUE.fullmatch(str(v)):
+            raise SystemExit(f"look token {k!r}: {v!r} is not a plain colour, length, keyword or name")
+        if k in FONT_KEYS and v not in fonts:
+            raise SystemExit(f"look token {k!r}: font {v!r} has no @font-face in style.css")
+
+
+def safe_id(i):
+    if not SAFE_ID.fullmatch(str(i)):
+        raise SystemExit(f"beat id {i!r}: use lowercase letters, digits, - and _ (it becomes a file name)")
+    return i
+
+
+def safe_name(name):
+    if Path(name).name != name or name.startswith("."):
+        raise SystemExit(f"tour image {name!r} must be a plain file name in shots/frames")
+    return name
+
+
 def load_direction(path, out=HERE):
     """direction.json: {look, override?, transition?, hold?, end?: {title, sub?, dur?}}. Returns the defaults and
     writes <out>/theme.css."""
@@ -112,6 +141,7 @@ def load_direction(path, out=HERE):
         raise SystemExit(f"direction.json look {look!r} not in presets.json: {sorted(k for k in presets if k[0] != '_')}")
     tokens = {**presets[look], **direction.get("override", {})}
     tokens.pop("mood", None)
+    check_tokens(tokens)
     fallback = {"sans": "system-ui, sans-serif", "display": "system-ui, sans-serif", "mono": "ui-monospace, monospace", "num": "system-ui, sans-serif"}
     faces = digit_faces(tokens) if tokens.get("num") and tokens["num"] != tokens.get("display") else ""
     if faces:  # the display face, with its digits taken from the number face
@@ -174,6 +204,7 @@ def main():
 
     out, t, modules = [], 0.0, []
     for b in beats:
+        safe_id(b["id"])  # before it is used as a file name below
         hold = float(b.get("hold", look["hold"]))
         kind_in = b.get("in", look["in"])
         if kind_in not in TRANSITIONS:
@@ -182,7 +213,7 @@ def main():
         words = [{"w": w["w"], "s": round(vstart + w["s"], 3), "e": round(vstart + w["e"], 3)} for w in b["caption_words"]]
         shutil.copy2(src / "voice" / f"{b['id']}.wav", HERE / "assets/voice" / f"{b['id']}.wav")
         beat = {
-            "id": b["id"], "kind": b["kind"], "scene": load_scene(b, beats_path.parent), "caption": b["caption"],
+            "id": safe_id(b["id"]), "kind": b["kind"], "scene": load_scene(b, beats_path.parent), "caption": b["caption"],
             "start": round(t, 3), "vstart": round(vstart, 3), "dur": b["dur"],
             "end": round(t + b["dur"] + hold, 3), "in": kind_in, "words": words,
         }
@@ -193,7 +224,7 @@ def main():
                 modules.append(mod)
         if b["kind"] == "ui":
             s = tour[b["id"]]
-            imgs = [s["after"]] + ([s["before"]["img"]] if s.get("before") else [])
+            imgs = [safe_name(s["after"])] + ([safe_name(s["before"]["img"])] if s.get("before") else [])
             for img in imgs:
                 shutil.copy2(src / "shots/frames" / img, HERE / "assets/frames" / img)
             f = beat["scene"]
@@ -212,7 +243,7 @@ def main():
     total = round(out[-1]["vstart"] + out[-1]["dur"] + TAIL, 2)
     end = None
     if look["end"]:  # an end card after the last voice: the report's name and where to find it
-        end = {"title": look["end"]["title"], "sub": look["end"].get("sub", ""), "start": total}
+        end = {"title": look["end"]["title"], "sub": look["end"].get("sub", ""), "start": total, "credits": []}
         total = round(total + float(look["end"].get("dur", END_DUR)), 2)
     for i, beat in enumerate(out):
         groups = split_phrases(beat["words"], beat["caption"])
@@ -225,7 +256,13 @@ def main():
             beat["phrases"].append({"show": show, "hide": hide, "wi": [beat["words"].index(w) for w in g]})
 
     # icons (inlined SVG), images and credits from <src>/media (scripts/fetch_assets.py); empty when there is none
-    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "captions": args.captions, "beats": out, "end": end, "media": collect_media(src, out=HERE)}
+    media = collect_media(src, out=HERE)
+    owed = [c["credit_text"] for c in media.get("credits", []) if gate(c.get("license", ""))[1] == "by"]
+    if owed and not end:
+        raise SystemExit('media under CC BY needs a visible credit: add "end" to direction.json (the end card lists it)')
+    if end:
+        end["credits"] = owed
+    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "captions": args.captions, "beats": out, "end": end, "media": media}
     (HERE / "data.js").write_text("// generated by build.py; do not edit\nwindow.TEASER = " + json.dumps(data, indent=1) + ";\n")
 
     audio = "\n".join(

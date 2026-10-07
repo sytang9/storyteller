@@ -65,8 +65,10 @@ def _clean(node: ET.Element) -> None:
         _clean(child)
     for key, val in list(node.attrib.items()):
         name, low = _local(key).lower(), val.strip().lower()
-        external_url = "url(" in low and not LOCAL_URL.search(val)
-        if name.startswith("on") or "javascript:" in low or external_url or (name == "href" and not low.startswith("#")):
+        # every url( must point inside the icon (#id); one local reference must not carry an external one along
+        external_url = "url(" in low and not all(re.match(r"\s*['\"]?#", part) for part in low.split("url(")[1:])
+        drop = name in ("style", "class") or name.startswith("on") or "javascript:" in low  # style could size or position the icon over the frame
+        if drop or external_url or (name == "href" and not low.startswith("#")):
             del node.attrib[key]
         elif name in ("fill", "stroke") and low not in KEEP_PAINT and not low.startswith("url(#"):
             node.attrib[key] = "currentColor"  # one colour per icon, set by the look role in media.js
@@ -82,7 +84,10 @@ def sanitize_svg(text: str) -> str:
         raise ValueError(f"svg does not parse: {e}") from e
     if _svg_tag(root.tag) != "svg":
         raise ValueError(f"root is {root.tag}, not an svg element")
-    _clean(root)
+    try:
+        _clean(root)
+    except RecursionError as e:
+        raise ValueError("svg is nested too deep") from e
     for key in ("width", "height"):
         root.attrib.pop(key, None)  # media.js sizes the icon
     return ET.tostring(root, encoding="unicode")
@@ -93,7 +98,7 @@ def _checked_file(src: Path, a: dict) -> Path:
     ok, why = gate(a.get("license", ""))
     if not ok:
         raise SystemExit(f"media {a.get('id')}: {why}")
-    if a.get("attribution_required") and not a.get("credit_text"):
+    if why == "by" and not a.get("credit_text"):  # from the licence itself: a hand-edited flag cannot waive the credit
         raise SystemExit(f"media {a['id']}: attribution required but credit_text is empty")
     f = (src / a["file"]).resolve()
     if f.parent != (src / "media").resolve() or not f.is_file():

@@ -38,7 +38,8 @@ Read first, in this order:
    cue, wordAt, popIn, reveal, drawLine, head, keyLabel, hero/heroGroup/heroProps, iconEl, imageEl, and the eases
    ENTER, EXIT and MOVE. Read the code; do not guess signatures.
 
-Write your module as <teaser>/<id>.js. It registers window.SCENES["<id>.js"] = function (root, b) {...}, which reads
+Write your module as <teaser>/<id>.js, wrapped in an IIFE (`(function () { ... })();`): every module and the
+template load as classic scripts in one page, so a top-level `const` clashes with another file's. It registers window.SCENES["<id>.js"] = function (root, b) {...}, which reads
 b.scene (the fields already in your beat in beats.timed.json; you may add fields to YOUR beat's scene in the
 sandbox beats file, and must list them in your status). Seek-safe rules: every tween on the shared `tl`; no
 Date.now, Math.random or rAF; tween only transforms, opacity and clip-path (no width, height, left or top tweens);

@@ -107,3 +107,12 @@ def test_number_face_swaps_only_the_digits_of_the_display_face(tmp_path):
     d.write_text(json.dumps({"look": "paper"}))  # no "num": the display face is used as is
     load_direction(d, tmp_path)
     assert "@font-face" not in (tmp_path / "theme.css").read_text()
+
+
+def test_direction_tokens_cannot_carry_css(tmp_path):
+    d = tmp_path / "direction.json"
+    for bad in ({"accent": "red; } body{background:url(http://x/y)} :root{--x:1"}, {"sans": 'x"; } @import url(http://x/a.css); a{--q:"'},
+                {"sans": "Comic Sans"}, {"evil;key": "1"}):
+        d.write_text(json.dumps({"look": "paper", "override": bad}))
+        with pytest.raises(SystemExit):
+            load_direction(d, tmp_path)

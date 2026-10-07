@@ -4,7 +4,7 @@
 // addArrow, CAM.
 // A `word` field is a caption word, or [word, n] for its nth use; changes land LEAD s before it.
 
-const words = (w) => [].concat(w); // "word" or ["word", n] -> arguments for cue()
+const cueArgs = (w) => [].concat(w); // "word" or ["word", n] -> arguments for cue()
 
 // statement: one short claim set large in the display face, line by line on spoken words, with one term marked.
 // scene: {eyebrow?, lines: [text], in: [word per line], em?: {text, word, style?: "block"|"underline", color?}, size?: px (default 120)}
@@ -22,7 +22,7 @@ function sceneStatement(root, b) {
       line.append(text.slice(0, at));
       const em = el("span", "", line, { position: "relative", display: "inline-block" }, s.em.text);
       line.append(text.slice(at + s.em.text.length));
-      const t = cue(b, ...words(s.em.word));
+      const t = cue(b, ...cueArgs(s.em.word));
       const c = col(s.em.color || "em");
       if ((s.em.style || "block") === "block") {
         // a solid block wipes in behind the word and the word turns to the ground colour: it stands out on any look
@@ -39,7 +39,7 @@ function sceneStatement(root, b) {
         tl.to(mark, { scaleX: 1, duration: 0.45, ease: MOVE }, t);
       }
     } else line.textContent = text;
-    reveal(line, cue(b, ...words(s.in[i])), "text");
+    reveal(line, cue(b, ...cueArgs(s.in[i])), "text");
   });
 }
 
@@ -64,10 +64,10 @@ function sceneCompare(root, b) {
       r.dataset.color = c;
       return r;
     });
-    const t = cue(b, ...words(side.word));
+    const t = cue(b, ...cueArgs(side.word));
     // an item with its own `word` enters on it, so the list builds with the voice; the rest enter with the side
     const own = (k) => typeof side.items[k] === "object" && side.items[k].word;
-    rows.forEach((r, k) => own(k) && reveal(r, cue(b, ...words(side.items[k].word)), "card", { from: "left" }));
+    rows.forEach((r, k) => own(k) && reveal(r, cue(b, ...cueArgs(side.items[k].word)), "card", { from: "left" }));
     if (i === 0) rows.forEach((r, k) => own(k) || reveal(r, t + k * 0.12, "card", { from: "left" })); // each row grows out of its colour edge
     else {
       tl.fromTo(panel, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: MOVE, immediateRender: true }, t);
@@ -77,9 +77,9 @@ function sceneCompare(root, b) {
   // the divider: a thin rule between the panels
   const mid = (CMP.x[0] + CMP.w + CMP.x[1]) / 2;
   const div = el("div", "abs", wrap, { left: mid - 1 + "px", top: CMP.labelH + "px", width: "2px", height: rowY(Math.max(s.left.items.length, s.right.items.length)) - CMP.labelH + "px", background: C.line, transformOrigin: "50% 0%" });
-  tl.fromTo(div, { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: MOVE, immediateRender: true }, cue(b, ...words(s.right.word)) - 0.2);
+  tl.fromTo(div, { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: MOVE, immediateRender: true }, cue(b, ...cueArgs(s.right.word)) - 0.2);
   if (s.strike) {
-    const t = cue(b, ...words(s.strike.word));
+    const t = cue(b, ...cueArgs(s.strike.word));
     s.strike.items.forEach((k, j) => {
       const r = sides[0].rows[k];
       const line = el("span", "abs", r, { left: "20px", right: "20px", top: CMP.row / 2 - 2 + "px", height: "4px", background: C.ink, transformOrigin: "0% 50%" });
@@ -96,7 +96,7 @@ function sceneCompare(root, b) {
     const x1 = CMP.x[1];
     const tint = sides[1].rows[l.to].dataset.color;
     const path = svgEl("path", svg, { d: `M${x0} ${y0} C${mid} ${y0} ${mid} ${y1} ${x1} ${y1}`, fill: "none", stroke: tint, "stroke-width": 4, "stroke-linecap": "round" });
-    const t = cue(b, ...words(l.word));
+    const t = cue(b, ...cueArgs(l.word));
     tl.set(path, { opacity: 0 }, 0);
     tl.set(path, { opacity: 1 }, t);
     drawLine(path, t, 0.45);
@@ -151,7 +151,7 @@ function sceneDiagram(root, b) {
     const tip = (r, da) => `${X(x1) - r * Math.cos(ang + da)} ${Y(y1) - r * Math.sin(ang + da)}`;
     const head_ = svgEl("path", g, { d: `M${tip(18, 0.45)} L${X(x1)} ${Y(y1)} L${tip(18, -0.45)}`, fill: "none", stroke, "stroke-width": 4, "stroke-linecap": "round", "stroke-linejoin": "round" });
     // an edge waits for both of its nodes: an arrow that lands before its target shows points at nothing
-    const t = Math.max(cue(b, ...words(e.word)), ...[a, z].map((n) => cue(b, ...words(n.word)) + 0.2));
+    const t = Math.max(cue(b, ...cueArgs(e.word)), ...[a, z].map((n) => cue(b, ...cueArgs(n.word)) + 0.2));
     if (e.dashed) popIn(path, t, { opacity: 0 });
     else {
       tl.set(path, { opacity: 0 }, 0); // a zero-length dash with a round cap still draws a dot
@@ -184,9 +184,9 @@ function sceneDiagram(root, b) {
     hits[n.id] = hits[n.id] || node;
     // a box grows from its edge with its text following; a dot settles from 0.6 and its text rises after it
     if (n.shape === "dot") {
-      reveal(hits[n.id], cue(b, ...words(n.word)), "icon");
-      reveal(node.lastChild, cue(b, ...words(n.word)) + 0.1, "text");
-    } else reveal(node, cue(b, ...words(n.word)), "card");
+      reveal(hits[n.id], cue(b, ...cueArgs(n.word)), "icon");
+      reveal(node.lastChild, cue(b, ...cueArgs(n.word)) + 0.1, "text");
+    } else reveal(node, cue(b, ...cueArgs(n.word)), "card");
     parts[n.id] = node;
   });
   if (s.focus) {
@@ -194,7 +194,7 @@ function sceneDiagram(root, b) {
     const k = s.focus.zoom || 1.6;
     const fx = X((Math.min(...f.map((n) => n.x - n.w / 2)) + Math.max(...f.map((n) => n.x + n.w / 2))) / 2);
     const fy = Y((Math.min(...f.map((n) => n.y - n.h / 2)) + Math.max(...f.map((n) => n.y + n.h / 2))) / 2);
-    const t = cue(b, ...words(s.focus.word));
+    const t = cue(b, ...cueArgs(s.focus.word));
     tl.to(wrap, { x: W / 2 - fx * k, y: H / 2 - fy * k, scale: k, transformOrigin: "0 0", duration: 0.9, ease: CAM }, t - 0.3);
     const keep = new Set(s.focus.nodes);
     const dim = Object.entries(parts).filter(([key]) => !keep.has(key) && !key.split(/[>:]/).every((p) => keep.has(p) || p === "label"));
@@ -226,7 +226,7 @@ function sceneLayers(root, b) {
     const tag = el("div", "abs", p, { left: LAYER.w - 40 + "px", top: LAYER.h - 40 + "px", transform: LAYER.untilt, transformOrigin: "0 0", whiteSpace: "nowrap" });
     el("div", "t-h2", tag, { color: C.ink, background: C.bg, padding: "4px 16px", borderRadius: "8px" }, l.text);
     if (l.sub) el("div", "t-label mute", tag, { padding: "4px 16px" }, l.sub);
-    const t = cue(b, ...words(l.word));
+    const t = cue(b, ...cueArgs(l.word));
     const rest = s.spread ? 0 : (n - 1 - i) * LAYER.gap;
     lands.push(t);
     tl.set(p, { visibility: "hidden", z: rest + LAYER.drop }, 0);
@@ -236,12 +236,12 @@ function sceneLayers(root, b) {
   });
   // spread: layers rise to their own heights, the top layer highest. Without spread they land already apart.
   if (s.spread) {
-    const ts = cue(b, ...words(s.spread));
+    const ts = cue(b, ...cueArgs(s.spread));
     if (ts < Math.max(...lands)) throw new Error(`beat ${b.id}: layers spread must come after the last layer word`);
     planes.forEach((q, i) => tl.to(q.p, { z: (n - 1 - i) * LAYER.gap, duration: 0.9, ease: MOVE }, ts + i * 0.06));
   }
   if (s.focus) {
-    const tf = cue(b, ...words(s.focus.word));
+    const tf = cue(b, ...cueArgs(s.focus.word));
     if (tf < Math.max(...lands)) throw new Error(`beat ${b.id}: layers focus must come after the last layer word`);
     planes.forEach((q, i) =>
       i === s.focus.index

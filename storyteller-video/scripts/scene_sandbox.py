@@ -18,6 +18,7 @@ TEMPLATE = Path(__file__).resolve().parent.parent / "assets/hf"
 
 
 def make(teaser, bin_dir, ids):
+    teaser, bin_dir = teaser.resolve(), bin_dir.resolve()  # links are written absolute, so they resolve from work/<id>/
     beats = {b["id"]: b for b in json.loads((teaser / "beats.timed.json").read_text())}
     for i in ids:
         if i not in beats:
@@ -30,7 +31,7 @@ def make(teaser, bin_dir, ids):
         shutil.copy2(teaser / "voice" / f"{i}.wav", box / "voice")
         for name, target in (("media", teaser / "media"), ("shots/frames", teaser / "shots/frames")):
             link = box / name
-            if target.exists() and not link.exists():
+            if target.exists() and not (link.is_symlink() or link.exists()):
                 link.symlink_to(target)
         (box / "shots/tour.json").write_text('{"beats": []}')
         if (teaser / "direction.json").exists():

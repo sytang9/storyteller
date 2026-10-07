@@ -32,14 +32,14 @@
   --display: var(--sans);
   --display-weight: 700;
   --display-case: none;
-  --bg: var(--bg);
+  --bg: #fbfbfa;
   --surface: #ffffff;
-  --ink: var(--ink);
-  --mute: var(--mute);
-  --line: var(--line);
-  --accent: var(--accent);
+  --ink: #1d2330;
+  --mute: #5b6577;
+  --line: #d3dae4;
+  --accent: #0a5fc4;
   --on-accent: #ffffff;
-  --ring: var(--ring);
+  --ring: #2f7de1;
   --radius: 24px;
   --num: var(--display); /* the face for figures; a look sets "num" when its display digits are hard to read */
   --em: var(--ink); /* emphasis: a block behind the word in this colour, the word in the ground colour */

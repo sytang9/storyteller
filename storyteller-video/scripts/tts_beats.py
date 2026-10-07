@@ -9,6 +9,8 @@ import numpy as np, soundfile as sf
 from kokoro import KPipeline
 VOICE = sys.argv[2] if len(sys.argv) > 2 else "af_heart"
 d = Path(sys.argv[1]); (d / "voice").mkdir(exist_ok=True); beats = json.loads((d / "beats.json").read_text())
+if any(not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", str(b.get("id", ""))) for b in beats):
+    sys.exit("beat ids must be lowercase letters, digits, - and _ (each becomes a file name)")
 def norm(w):
     return re.sub(r"[^a-z0-9]", "", w.lower())
 
