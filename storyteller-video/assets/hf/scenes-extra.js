@@ -7,8 +7,9 @@
 const words = (w) => [].concat(w); // "word" or ["word", n] -> arguments for cue()
 
 // statement: one short claim set large in the display face, line by line on spoken words, with one term marked.
-// scene: {eyebrow?, lines: [text], in: [word per line], em?: {text, word}, size?: px (default 120)}
-//   em.text must sit inside one line; it turns accent (or em.color, when the accent carries a role) and gets an underline drawn on em.word
+// scene: {eyebrow?, lines: [text], in: [word per line], em?: {text, word, style?: "block"|"underline", color?}, size?: px (default 120)}
+//   em.text must sit inside one line. "block" (default): a block in the look's --em colour wipes in behind it and the
+//   word turns to the ground colour; "underline": the word turns em.color and an underline draws
 function sceneStatement(root, b) {
   const s = b.scene;
   if (s.eyebrow) head(root, s.eyebrow);
@@ -21,11 +22,22 @@ function sceneStatement(root, b) {
       line.append(text.slice(0, at));
       const em = el("span", "", line, { position: "relative", display: "inline-block" }, s.em.text);
       line.append(text.slice(at + s.em.text.length));
-      const mark = el("span", "abs", em, { left: 0, right: 0, bottom: "-0.04em", height: "0.08em", background: col(s.em.color || "accent"), transformOrigin: "0% 50%" });
       const t = cue(b, ...words(s.em.word));
-      tl.set(mark, { scaleX: 0 }, 0);
-      tl.to(em, { color: col(s.em.color || "accent"), duration: 0.3, ease: ENTER }, t);
-      tl.to(mark, { scaleX: 1, duration: 0.45, ease: MOVE }, t);
+      const c = col(s.em.color || "em");
+      if ((s.em.style || "block") === "block") {
+        // a solid block wipes in behind the word and the word turns to the ground colour: it stands out on any look
+        // without borrowing a role colour (an underline in ink read as faint on a dark ground)
+        Object.assign(em.style, { isolation: "isolate", padding: "0 0.12em", margin: "0 0.04em 0 -0.12em" }); // the right padding stays, so a following "." sits clear of the block
+        const block = el("span", "abs", em, { left: 0, right: 0, top: "0.06em", bottom: "-0.2em", background: c, zIndex: -1, transformOrigin: "0% 50%" }); // deep enough for descenders (g, y), which turn to the ground colour
+        tl.set(block, { scaleX: 0 }, 0);
+        tl.to(block, { scaleX: 1, duration: 0.4, ease: MOVE }, t);
+        tl.to(em, { color: C.bg, duration: 0.2, ease: ENTER }, t + 0.15);
+      } else {
+        const mark = el("span", "abs", em, { left: 0, right: 0, bottom: "-0.04em", height: "0.1em", background: c, transformOrigin: "0% 50%" });
+        tl.set(mark, { scaleX: 0 }, 0);
+        tl.to(em, { color: c, duration: 0.3, ease: ENTER }, t);
+        tl.to(mark, { scaleX: 1, duration: 0.45, ease: MOVE }, t);
+      }
     } else line.textContent = text;
     reveal(line, cue(b, ...words(s.in[i])), "text");
   });

@@ -5,7 +5,7 @@ the same cut every time. The direction step fixes the choices once, after the sc
 exists. Write two files in the teaser folder:
 
 - `direction.md` (60 lines at most): the page every scene worker and the critic read.
-- `direction.json`: what `build.py` reads: `{"look": "<preset>", "override": {token: value}?, "transition": "<primary>", "hold": 0.35}`.
+- `direction.json`: what `build.py` reads: `{"look": "<preset>", "override": {token: value}?, "transition": "<primary>", "hold": 0.35, "end"?: {title, sub?, dur?}}`.
 
 ## direction.md
 
@@ -37,6 +37,23 @@ exists. Write two files in the teaser folder:
 
 Every look keeps body text and captions at 4.5:1 or more, and role colours at 3:1 (`test_build.py` checks it).
 Over a `ui` screenshot the theme does not apply; the still keeps its own colours.
+
+## Text: size, colour, emphasis, figures
+
+- Every label is 28 px or more at 1080p and keeps 4.5:1 against what is behind it; a label over a road, a map or a
+  photo gets its own ground. Kickers use the body face in tracked caps, not a second type voice.
+- Step text back by colour, not opacity: to push a label into the background, fade the shapes around it and turn
+  the text from ink to mute; a dimmed figure stops at 0.8. `hyperframes check` reads each text's own colour and
+  ignores the opacity of its parents, so text faded to 0.4-0.5 passes the check while it measures about 2-4:1.
+- Emphasis is a block, not a colour: `statement` em (default `style: "block"`) wipes a block in the look's `--em`
+  colour (default ink) behind the word and turns the word to the ground colour. It stands out on dark and light
+  looks and borrows no role colour. A custom scene that emphasises a word does the same. A thin underline or a
+  colour change alone reads as faint (a viewer missed "Rarely." in white with an underline).
+- Figures: if the display face's digits are hard to read (a flagged "1" reads as "i"), set `"num"` in the look
+  (`night` uses Inter). The display face then takes its digits from it everywhere, with no scene code. Numbers in
+  custom scenes use the `t-num` or `t-display` class, never a hard-coded font.
+- End card: `direction.json` `"end": {"title": "<report name>", "sub": "<where to find it>", "dur"?: 3}` adds a
+  card after the last voice. Use it for any video that leaves the report page.
 
 ## Transition grammar
 

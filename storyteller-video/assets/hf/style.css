@@ -41,6 +41,8 @@
   --on-accent: #ffffff;
   --ring: var(--ring);
   --radius: 24px;
+  --num: var(--display); /* the face for figures; a look sets "num" when its display digits are hard to read */
+  --em: var(--ink); /* emphasis: a block behind the word in this colour, the word in the ground colour */
   /* role colours: the data names these keys (blue = the accent by default) */
   --blue: #0a5fc4;
   --teal: #0d6e67;
@@ -76,7 +78,7 @@ body {
 /* tabular figures only where digits count or stack: Inter's tnum also widens the hyphen */
 .t-display, .t-num, .tnum { font-variant-numeric: tabular-nums; }
 .t-display { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 200px; line-height: 1; letter-spacing: var(--track-display); }
-.t-num { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 128px; line-height: 1.125; letter-spacing: var(--track-display); }
+.t-num { font-family: var(--num); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 128px; line-height: 1.125; letter-spacing: var(--track-display); }
 .t-h1 { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 64px; line-height: 1.125; letter-spacing: var(--track-display); }
 .t-h2 { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 48px; line-height: 1.167; letter-spacing: -0.02em; }
 .t-body { font-size: 32px; line-height: 1.25; font-weight: 600; letter-spacing: -0.011em; }

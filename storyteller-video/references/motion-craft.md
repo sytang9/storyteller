@@ -144,7 +144,8 @@ tl.fromTo(field, { scaleX: 3, scaleY: 6 }, { scaleX: 1, scaleY: 1, duration: 0.8
 
 Run each line against your scene. A beginner answer is a fix.
 
-0. Does the beat open on an empty frame, show an empty placeholder, or leave a label over the next beat? Show the finished set from frame 1; bring cue-bound things in whole (section 1).
+0a. Is any label under 28 px, under 4.5:1 contrast, or a figure hard-coded to a font? Fix it (direction.md, Text).
+0b. Does the beat open on an empty frame, show an empty placeholder, or leave a label over the next beat? Show the finished set from frame 1; bring cue-bound things in whole (section 1).
 
 1. Does every element enter with the same move? Give each role its own move (section 3).
 2. Is there one lead that moves first and furthest? Name it in a comment.

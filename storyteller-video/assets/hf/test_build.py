@@ -84,11 +84,26 @@ def test_every_look_keeps_text_readable(name):
 def test_direction_writes_theme_and_rejects_unknown_values(tmp_path):
     d = tmp_path / "direction.json"
     d.write_text(json.dumps({"look": "night", "override": {"accent": "#ff8800"}, "transition": "push", "hold": 0.5}))
-    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5}
+    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5, "end": None}
     theme = (tmp_path / "theme.css").read_text()
-    assert "--accent: #ff8800;" in theme and '--display: "Space Grotesk Video"' in theme
-    for bad in ({"look": "neon"}, {"look": "_doc"}, {"look": "paper", "transition": "spin"}):
+    assert "--accent: #ff8800;" in theme and '--display-base: "Space Grotesk Video"' in theme
+    for bad in ({"look": "neon"}, {"look": "_doc"}, {"look": "paper", "transition": "spin"}, {"look": "paper", "end": {"sub": "x"}}):
         d.write_text(json.dumps(bad))
         with pytest.raises(SystemExit):
             load_direction(d, tmp_path)
     assert load_direction(tmp_path / "missing.json", tmp_path)["look"] == "paper"
+
+
+def test_number_face_swaps_only_the_digits_of_the_display_face(tmp_path):
+    d = tmp_path / "direction.json"
+    d.write_text(json.dumps({"look": "night"}))
+    load_direction(d, tmp_path)
+    theme = (tmp_path / "theme.css").read_text()
+    assert '--display: "Look Display"' in theme and '--num: "Inter Video"' in theme
+    faces = [l for l in theme.splitlines() if l.startswith("@font-face")]
+    digit = [l for l in faces if "unicode-range" in l]
+    assert digit and all("inter-latin" in l for l in digit)  # digits from the number face
+    assert all("space-grotesk" in l for l in faces if l not in digit)  # everything else from the display face
+    d.write_text(json.dumps({"look": "paper"}))  # no "num": the display face is used as is
+    load_direction(d, tmp_path)
+    assert "@font-face" not in (tmp_path / "theme.css").read_text()

@@ -30,7 +30,7 @@
       const TOKENS = getComputedStyle(document.documentElement);
       const tok = (k) => TOKENS.getPropertyValue("--" + k).trim();
       const C = Object.fromEntries(
-        ["bg", "surface", "ink", "mute", "line", "accent", "blue", "teal", "purple", "orange", "good"].map((k) => [k, tok(k)]),
+        ["bg", "surface", "ink", "mute", "line", "accent", "em", "blue", "teal", "purple", "orange", "good"].map((k) => [k, tok(k)]),
       );
       C.onAccent = tok("on-accent");
       gsap.registerPlugin(CustomEase);
@@ -250,7 +250,17 @@
           }),
         );
 
-        finishEvents(bodies, SPANS); // events.js: camera pushes and caption lifts need the fit and the band
+        // the end card (direction.json "end"): the last scene clears and the report's name holds on the ground
+      if (D.end) {
+        const card = el("div", "abs scene", stage, { height: FRAME_H + "px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "24px", textAlign: "center" });
+        const title = el("div", "t-display", card, { fontSize: "96px", lineHeight: 1.1, maxWidth: "1500px" }, D.end.title);
+        const sub = D.end.sub ? el("div", "t-body mute", card, { fontSize: "40px" }, D.end.sub) : null;
+        tl.to(roots[roots.length - 1], { opacity: 0, duration: 0.5, ease: EXIT }, D.end.start - 0.5);
+        tl.set(card, { opacity: 1 }, D.end.start);
+        reveal(title, D.end.start + 0.1, "text");
+        if (sub) reveal(sub, D.end.start + 0.5, "text");
+      }
+      finishEvents(bodies, SPANS); // events.js: camera pushes and caption lifts need the fit and the band
 
         const morphLayer = el("div", "abs", document.getElementById("root"), { left: 0, top: 0, width: "1920px", height: "1080px" });
         buildMorphs(morphLayer); // motion.js: measures both ends of each match cut in frame px, after the fit
