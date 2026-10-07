@@ -81,9 +81,12 @@ body {
 .t-h2 { font-family: var(--display); font-weight: var(--display-weight); text-transform: var(--display-case); font-size: 48px; line-height: 1.167; letter-spacing: -0.02em; }
 .t-body { font-size: 32px; line-height: 1.25; font-weight: 600; letter-spacing: -0.011em; }
 .t-label { font-size: 24px; line-height: 1.333; font-weight: 600; letter-spacing: -0.005em; }
-.t-eyebrow { font-family: var(--mono); font-size: 24px; line-height: 1.333; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
+.t-eyebrow { font-family: var(--sans); font-size: 28px; line-height: 1.333; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
 .mute { color: var(--mute); }
 
+/* each scene stands on its own ground, so an incoming wipe or push covers the outgoing scene instead of printing
+   over it */
+.scene { background: var(--bg); }
 /* scene area: everything above the caption band */
 #stage {
   left: 0;

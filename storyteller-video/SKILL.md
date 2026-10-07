@@ -14,9 +14,10 @@ Kokoro-82M voice (Apache-2.0), Playwright stills, HyperFrames (Apache-2.0) with 
 1. Suggest a video only when the story has a mechanism or flow that moves (a job passing between roles, a pipeline,
    a before/after), or a real app the reader must picture. Never for a short or simple report.
 2. Name the 2-4 scenes you would show and offer two levels with their costs (the render itself is about 1 min):
-   - **Template scenes**: 5-11M tokens processed, 15-30 min of agent time.
-   - **Bespoke scenes** (custom modules for moments the types cannot show, one subagent each): 14-21M, about 30 min.
-   These include the direction and critic steps; they are estimates from the last measured builds (4-9M and 19M).
+   - **Template scenes**: 5-12M tokens processed, 15-30 min. Clear, but it looks like a template.
+   - **Bespoke scenes** (a custom scene per beat, one designer subagent each, a critic and one fix round): about
+     55-60M tokens processed and 60-70 min (measured 2026-10-07 on a 12-beat cut: script and briefs 8.9M, ten
+     designers 28.2M, critic 1.3M, eight fixers 16.9M). This is the level that looks made by a motion designer.
 3. Build only on a yes, at the level the user picks.
 
 ## Who does what
@@ -28,11 +29,13 @@ after them. Fresh subagents do the work that needs a clean context, and hand off
 | --- | --- | --- |
 | 1. Script | main thread | `beats.json` (`references/script.md`); gates: `jargon_check.py`, then a cold-read subagent |
 | 2. Direction | main thread | `direction.md` + `direction.json` (`references/direction.md`); gate: `check_variety.py` |
-| 3. Voice | main thread | `voice/*.wav`, `beats.timed.json` (`scripts/tts_beats.py`); re-run `check_variety.py` |
+| 3. Voice | main thread | `voice/*.wav`, `beats.timed.json` (`scripts/tts_beats.py`) |
+| 3b. Events | main thread | `scene.events` on each beat, so no beat sits still for 3 s (`references/scenes.md`, Events); re-run `check_variety.py` on `beats.timed.json` |
 | 4. Screens | main thread | `shots/` from `scripts/record_tour.cjs` (`ui` beats only, below) |
-| 5. Bespoke scenes | one subagent per scene, in parallel | `<id>.js` custom module + its frames; packet: the beat, its word times, `direction.md`, the motion brief, `references/scenes.md` |
-| 6. Compose and render | main thread | `teaser.mp4`, `teaser.vtt`, `poster.jpg` |
-| 7. Critic | fresh subagent, frames only | `qc/sheet.png` from `scripts/qc_sheet.py`, then `qc/critic.json`; fix the 3 worst, two rounds at most (`references/critic.md`) |
+| 4b. Media | main thread | `media.json` from the metaphor table, then `scripts/fetch_assets.py`: open-licence icons, and a photo only where the real object is the point (`references/media.md`); look at every photo |
+| 5. Bespoke scenes | briefs by the main thread, then one subagent per scene, in parallel, each in its own sandbox (`references/scene-worker.md`, `scripts/scene_sandbox.py`) | `<id>.js` custom module + its frames; packet: the beat, its word times, `direction.md`, `references/motion-craft.md` (the pro motion rules and `assets/hf/examples/craft-example.js`), `references/scenes.md`, the media ids |
+| 6. Compose and render | main thread | `teaser.mp4`, `teaser.vtt`, `poster.jpg`; gate: `scripts/frame_scan.py` (no strobe, no empty frames) |
+| 7. Critic | fresh subagent, frames only; then a fresh fixer per flagged scene (`references/scene-worker.md`) | `qc/sheet.png` from `scripts/qc_sheet.py`, then `qc/critic.json`; fix the 3 worst, two rounds at most (`references/critic.md`) |
 | 8. Embed | main thread | the report rebuilt with the video in it (`references/critic.md`) |
 
 Do not add roles beyond these: script, direction and scene design depend on each other, and agents that split them
@@ -76,5 +79,5 @@ carry two ideas is not: split them.
 - Measure boxes on the settled page; click by accessible name (a button's aria-label can differ from its text).
 - A block wider than 65% of the screen is framed around its text, at about 1.15x the text width.
 - One zoom per `ui` beat, landing 0.3 s before the anchor word, held to the end of the beat.
-- An even tempo reads as monotone: the legacy-links cut ran 12 beats of 7-12 s with one cut type, and the viewer
+- An even tempo reads as monotone: a trial cut ran 12 beats of 7-12 s with one cut type, and the viewer
   said every scene felt the same. `check_variety.py` now fails that sheet.

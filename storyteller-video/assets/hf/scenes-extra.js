@@ -1,13 +1,14 @@
 // More scene TYPES, for variety: type as the picture, before/after, a diagram that draws itself, layers in depth.
 // Same contract as scenes.js: fn(root, beat) reads beat.scene, builds DOM in root, adds tweens to the shared tl.
-// Helpers from index.html: el, svgEl, tl, C, col, cue, popIn, head, drawLine, ENTER, EXIT, MOVE.
+// Helpers from index.html: el, svgEl, tl, C, col, cue, head, ENTER, EXIT, MOVE; from motion.js: reveal, popIn, drawLine,
+// addArrow, CAM.
 // A `word` field is a caption word, or [word, n] for its nth use; changes land LEAD s before it.
 
 const words = (w) => [].concat(w); // "word" or ["word", n] -> arguments for cue()
 
 // statement: one short claim set large in the display face, line by line on spoken words, with one term marked.
 // scene: {eyebrow?, lines: [text], in: [word per line], em?: {text, word}, size?: px (default 120)}
-//   em.text must sit inside one line; it turns accent and gets an underline drawn on em.word
+//   em.text must sit inside one line; it turns accent (or em.color, when the accent carries a role) and gets an underline drawn on em.word
 function sceneStatement(root, b) {
   const s = b.scene;
   if (s.eyebrow) head(root, s.eyebrow);
@@ -20,19 +21,19 @@ function sceneStatement(root, b) {
       line.append(text.slice(0, at));
       const em = el("span", "", line, { position: "relative", display: "inline-block" }, s.em.text);
       line.append(text.slice(at + s.em.text.length));
-      const mark = el("span", "abs", em, { left: 0, right: 0, bottom: "-0.04em", height: "0.08em", background: C.accent, transformOrigin: "0% 50%" });
+      const mark = el("span", "abs", em, { left: 0, right: 0, bottom: "-0.04em", height: "0.08em", background: col(s.em.color || "accent"), transformOrigin: "0% 50%" });
       const t = cue(b, ...words(s.em.word));
       tl.set(mark, { scaleX: 0 }, 0);
-      tl.to(em, { color: C.accent, duration: 0.3, ease: ENTER }, t);
+      tl.to(em, { color: col(s.em.color || "accent"), duration: 0.3, ease: ENTER }, t);
       tl.to(mark, { scaleX: 1, duration: 0.45, ease: MOVE }, t);
     } else line.textContent = text;
-    popIn(line, cue(b, ...words(s.in[i])), { opacity: 0, y: 48 });
+    reveal(line, cue(b, ...words(s.in[i])), "text");
   });
 }
 
 // compare: the old way beside the new. The left panel enters first; the right panel wipes in on its word.
 // strike crosses out left items that go away; links tie a left item to what it became on the right.
-// scene: {eyebrow, title, left: {label, items: [text | {text, color}], word, color?}, right: {label, items, word, color?},
+// scene: {eyebrow, title, left: {label, items: [text | {text, color?, word?}], word, color?}, right: {label, items, word, color?},
 //         strike?: {items: [left indices], word}, links?: [{from: left index, to: right index, word}]}
 //   items: 6 at most per side, each 5 words or fewer (one line)
 const CMP = { x: [120, 1040], w: 760, top: 0, row: 96, gap: 20, labelH: 72 };
@@ -52,7 +53,10 @@ function sceneCompare(root, b) {
       return r;
     });
     const t = cue(b, ...words(side.word));
-    if (i === 0) rows.forEach((r, k) => popIn(r, t + k * 0.12, { opacity: 0, x: -32 }));
+    // an item with its own `word` enters on it, so the list builds with the voice; the rest enter with the side
+    const own = (k) => typeof side.items[k] === "object" && side.items[k].word;
+    rows.forEach((r, k) => own(k) && reveal(r, cue(b, ...words(side.items[k].word)), "card", { from: "left" }));
+    if (i === 0) rows.forEach((r, k) => own(k) || reveal(r, t + k * 0.12, "card", { from: "left" })); // each row grows out of its colour edge
     else {
       tl.fromTo(panel, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: MOVE, immediateRender: true }, t);
     }
@@ -112,12 +116,14 @@ function sceneDiagram(root, b) {
   const X = (x) => x - bx.x0;
   const Y = (y) => y - bx.y0;
   const svg = svgEl("svg", wrap, { class: "abs", width: W, height: H, style: "left:0;top:0;overflow:visible" });
-  // an edge runs between the two node borders, along the line joining their centres
+  // an edge runs between the two node borders, along the line joining their centres; its tip stops 6 px short of
+  // the border (at most 12 px on screen at the 2x fit cap, the arrow check's tolerance)
   const rim = (n, dx, dy) => {
-    const t = Math.min(n.w / 2 / Math.abs(dx || 1e-9), n.h / 2 / Math.abs(dy || 1e-9)) + 10 / Math.hypot(dx, dy);
+    const t = Math.min(n.w / 2 / Math.abs(dx || 1e-9), n.h / 2 / Math.abs(dy || 1e-9)) + 6 / Math.hypot(dx, dy);
     return [n.x + dx * t, n.y + dy * t];
   };
   const parts = {};
+  const hits = {}; // the box an arrow must touch: the node, or a dot's circle
   (s.edges || []).forEach((e) => {
     const a = byId[e.from];
     const z = byId[e.to];
@@ -132,7 +138,8 @@ function sceneDiagram(root, b) {
     const ang = Math.atan2(y1 - y0, x1 - x0);
     const tip = (r, da) => `${X(x1) - r * Math.cos(ang + da)} ${Y(y1) - r * Math.sin(ang + da)}`;
     const head_ = svgEl("path", g, { d: `M${tip(18, 0.45)} L${X(x1)} ${Y(y1)} L${tip(18, -0.45)}`, fill: "none", stroke, "stroke-width": 4, "stroke-linecap": "round", "stroke-linejoin": "round" });
-    const t = cue(b, ...words(e.word));
+    // an edge waits for both of its nodes: an arrow that lands before its target shows points at nothing
+    const t = Math.max(cue(b, ...words(e.word)), ...[a, z].map((n) => cue(b, ...words(n.word)) + 0.2));
     if (e.dashed) popIn(path, t, { opacity: 0 });
     else {
       tl.set(path, { opacity: 0 }, 0); // a zero-length dash with a round cap still draws a dot
@@ -140,6 +147,7 @@ function sceneDiagram(root, b) {
       drawLine(path, t, 0.45);
     }
     popIn(head_, t + 0.4, { opacity: 0 });
+    addArrow(b, svg, X(x1), Y(y1), () => hits[e.to], t + 0.8); // checked after the build, in frame px
     if (e.label) {
       const len = Math.hypot(x1 - x0, y1 - y0);
       const [nx, ny] = [-(y1 - y0) / len, (x1 - x0) / len]; // the label sits 36 px to one side of the line
@@ -154,14 +162,19 @@ function sceneDiagram(root, b) {
     let node;
     if (n.shape === "dot") {
       node = el("div", "abs", wrap, { left: X(n.x) - 130 + "px", top: Y(n.y) - n.h / 2 + "px", width: "260px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" });
-      el("div", "", node, { width: n.w + "px", height: n.h + "px", borderRadius: "50%", background: color });
+      hits[n.id] = el("div", "", node, { width: n.w + "px", height: n.h + "px", borderRadius: "50%", background: color });
       el("div", "t-label", node, { textAlign: "center" }, n.text);
     } else {
       node = el("div", "abs card t-body", wrap, {
         left: X(n.x) - n.w / 2 + "px", top: Y(n.y) - n.h / 2 + "px", width: n.w + "px", height: n.h + "px", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px", borderColor: color, borderWidth: "3px", background: `color-mix(in srgb, ${color} 14%, ${C.surface})`, ...(n.shape === "pill" ? { borderRadius: n.h / 2 + "px" } : {}),
       }, n.text);
     }
-    popIn(node, cue(b, ...words(n.word)), { opacity: 0, scale: 0.85 });
+    hits[n.id] = hits[n.id] || node;
+    // a box grows from its edge with its text following; a dot settles from 0.6 and its text rises after it
+    if (n.shape === "dot") {
+      reveal(hits[n.id], cue(b, ...words(n.word)), "icon");
+      reveal(node.lastChild, cue(b, ...words(n.word)) + 0.1, "text");
+    } else reveal(node, cue(b, ...words(n.word)), "card");
     parts[n.id] = node;
   });
   if (s.focus) {
@@ -170,7 +183,7 @@ function sceneDiagram(root, b) {
     const fx = X((Math.min(...f.map((n) => n.x - n.w / 2)) + Math.max(...f.map((n) => n.x + n.w / 2))) / 2);
     const fy = Y((Math.min(...f.map((n) => n.y - n.h / 2)) + Math.max(...f.map((n) => n.y + n.h / 2))) / 2);
     const t = cue(b, ...words(s.focus.word));
-    tl.to(wrap, { x: W / 2 - fx * k, y: H / 2 - fy * k, scale: k, transformOrigin: "0 0", duration: 0.9, ease: MOVE }, t - 0.3);
+    tl.to(wrap, { x: W / 2 - fx * k, y: H / 2 - fy * k, scale: k, transformOrigin: "0 0", duration: 0.9, ease: CAM }, t - 0.3);
     const keep = new Set(s.focus.nodes);
     const dim = Object.entries(parts).filter(([key]) => !keep.has(key) && !key.split(/[>:]/).every((p) => keep.has(p) || p === "label"));
     tl.to(dim.map(([, n]) => n), { opacity: 0.2, duration: 0.5, ease: EXIT }, t - 0.3);

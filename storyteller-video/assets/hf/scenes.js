@@ -1,6 +1,7 @@
 // Generic motion scene TYPES. Each is fn(root, beat): it reads beat.scene (data from beats.timed.json),
 // builds DOM in root and adds tweens to the shared tl. Nothing report-specific lives here.
-// Helpers from index.html: el, svgEl, tl, C, col, cue, wordAt, popIn, head, hero, keyLabel, ENTER, EXIT, MOVE.
+// Helpers from index.html: el, svgEl, tl, C, col, cue, wordAt, head, hero, keyLabel, ENTER, EXIT, MOVE;
+// from motion.js: reveal (entrances by role), popIn, FOLLOW.
 // The assembly centres each scene's content vertically, so tops here only set the internal layout.
 
 // ---- shared card row: used by retype and merge so the cards sit in the same place in both ----
@@ -51,7 +52,7 @@ function sceneRetype(root, b) {
     t.bars.forEach((bar) => tl.set(bar, { scaleX: 0 }, 0));
   });
   const toolsAt = s.toolsWord ? cue(b, s.toolsWord) : b.start + 0.15;
-  tools.forEach((t, i) => popIn(t.card, toolsAt + i * 0.1));
+  tools.forEach((t, i) => reveal(t.card, toolsAt + i * 0.1, "card", { from: "top" })); // grows down from its colour bar
   popIn(paper, cue(b, s.source.word), { opacity: 0, y: 0, scale: 0.7 });
   // a copy of the source flies into each target in turn and lands on that target's word
   // one copy in the air at a time: a flight never starts before the previous one lands
@@ -73,7 +74,7 @@ function sceneRetype(root, b) {
     t.bars.forEach((bar, k) =>
       tl.fromTo(bar, { scaleX: 0, backgroundColor: C.line }, { scaleX: 1, backgroundColor: C.mute, duration: 0.2, ease: ENTER, immediateRender: false }, at + k * 0.1),
     );
-    if (t.tag) popIn(t.tag, at - 0.05, { opacity: 0, y: 0, scale: 0.6 });
+    if (t.tag) reveal(t.tag, at - 0.05, "icon");
   });
 }
 
@@ -110,11 +111,10 @@ function sceneMerge(root, b) {
   job.setAttribute("data-layout-allow-overlap", "");
   const text = jobCard(job, s);
   tl.set(job, { opacity: 0 }, 0);
-  tl.set(text, { opacity: 0 }, 0);
-  tl.fromTo(job, { opacity: 0, left: stackX, width: CARD_W }, { opacity: 1, duration: 0.15, ease: ENTER, immediateRender: false }, swap);
+  tl.fromTo(job, { opacity: 0, left: stackX, width: CARD_W }, { opacity: 1, left: stackX, width: CARD_W, duration: 0.15, ease: ENTER, immediateRender: false }, swap);
   tools.forEach((t) => tl.to(t.card, { opacity: 0, duration: 0.15, ease: EXIT }, swap + 0.1));
   tl.to(job, { left: JOB.x, width: JOB.w, duration: OPEN, ease: MOVE }, swap + 0.15);
-  tl.fromTo(text, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: ENTER, immediateRender: false }, land - 0.2);
+  text.forEach((n, i) => reveal(n, land - 0.2 + i * 0.12, "text"));
   if (s.steps && s.tick) addSteps(job, b, { ...s, show: s.show || s.landWord });
 }
 
@@ -138,16 +138,18 @@ function addSteps(job, b, s) {
     const num = el("div", "abs", dot, { inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }, String(i + 1));
     const tick = svgEl("svg", dot, { viewBox: "0 0 24 24", style: "position:absolute;left:22px;top:22px;width:44px;height:44px" });
     svgEl("path", tick, { d: "M5 12.5 L9.5 17 L19 7.5", fill: "none", stroke: C.onAccent, "stroke-width": 3.4, "stroke-linecap": "round", "stroke-linejoin": "round" });
-    el("div", "t-body", g, { whiteSpace: "nowrap" }, name);
-    return { g, dot, num, tick };
+    const label = el("div", "t-body", g, { whiteSpace: "nowrap" }, name);
+    return { g, dot, num, tick, label };
   });
-  tl.set(nodes.map((q) => q.g), { opacity: 0 }, 0);
   tl.set(nodes.map((q) => q.tick), { opacity: 0 }, 0);
   tl.set(fill, { scaleX: 0 }, 0);
-  tl.set(track, { opacity: 0 }, 0); // a hero card may be on screen before this beat: hide the rail until the steps show
+  // a hero card may be on screen before this beat: the rail draws on and the steps arrive only on show
   const show = cue(b, s.show);
-  tl.to(track, { opacity: 1, duration: 0.3, ease: ENTER }, show);
-  nodes.forEach((q, i) => popIn(q.g, show + i * 0.06, { opacity: 0, y: 16 }));
+  reveal(track, show, "line");
+  nodes.forEach((q, i) => {
+    reveal(q.dot, show + i * 0.08, "icon");
+    reveal(q.label, show + i * 0.08 + 0.12, "text");
+  });
   const t0 = cue(b, s.tick[0]);
   const t1 = cue(b, s.tick[1]);
   const gap = (t1 - t0) / (k - 1);
@@ -218,7 +220,7 @@ function sceneLanes(root, b) {
 
   laneNames.forEach((n, i) => {
     tl.fromTo(laneBgs[i], { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, b.start + 0.05 * i);
-    popIn(n, b.start + 0.1 + i * 0.06, { opacity: 0, x: -30 });
+    reveal(n, b.start + 0.1 + i * 0.06, "text");
     if (LANES[i].word) tl.fromTo(n, { scale: 1 }, { scale: 1.12, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1, immediateRender: false }, cue(b, ...LANES[i].word));
   });
   stepBars.forEach((bar) => tl.set(bar, { scaleX: 0 }, 0));
@@ -232,7 +234,7 @@ function sceneLanes(root, b) {
   const applyTicker = () => {
     stack.style.transform = `translateY(${-springs.reduce((a, q) => a + q.p, 0) * TICK_H}px)`;
   };
-  tl.fromTo(token, { x: pts[0].x - TOKEN_R, y: pts[0].y - TOKEN_R, scale: 0 }, { scale: 1, duration: 0.4, ease: "power3.out" }, t0 - 0.3);
+  tl.fromTo(token, { x: pts[0].x - TOKEN_R, y: pts[0].y - TOKEN_R, scale: 0 }, { x: pts[0].x - TOKEN_R, y: pts[0].y - TOKEN_R, scale: 1, duration: 0.4, ease: "power3.out" }, t0 - 0.3);
   tl.to(laneBgs[laneIdx[STOPS[0][1]]], { opacity: LANE_ACTIVE, duration: 0.3 }, t0);
   let activeStep = -1;
   STOPS.forEach(([stepId, role], i) => {
@@ -282,16 +284,19 @@ function countUp(node, from, to, landAt, dur) {
 function sceneCounters(root, b) {
   const s = b.scene;
   head(root, s.eyebrow, s.title);
-  const row = el("div", "abs", root, { left: 0, top: "264px", width: "1920px", display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "144px" });
+  // the row hugs its numbers (centred on x 960 below), so the fit frames the figures and not the whole width
+  const row = el("div", "abs", root, { left: 0, top: "264px", display: "flex", alignItems: "flex-start", gap: "144px" });
   s.items.forEach((it) => {
     const c = el("div", "", row, { display: "flex", flexDirection: "column", alignItems: "center" });
     const line = el("div", "t-display", c, { color: col(it.color), whiteSpace: "nowrap" });
     const num = el("span", "", line, { display: "inline-block", minWidth: String(it.value).length * 0.62 + "em", textAlign: "center" }, "0");
-    el("div", "t-body mute", c, { marginTop: "16px" }, it.label);
+    const label = el("div", "t-body mute", c, { marginTop: "16px" }, it.label);
     const land = wordAt(b, it.word);
     const dur = Math.min(1.1, land - b.start - 0.2);
-    tl.set(c, { opacity: 0 }, 0);
-    popIn(c, land - dur - 0.35);
+    // the figure slides up out of its slot, its label follows with overlap
+    const t0 = land - dur - 0.35;
+    reveal(line, t0, "number");
+    reveal(label, t0 + 0.8 * (1 - FOLLOW), "text");
     countUp(num, 0, it.value, land, dur);
     if (it.of !== undefined) {
       const of = el("span", "", line, { fontSize: "0.5em" }, ` / ${it.of}`);
@@ -301,9 +306,10 @@ function sceneCounters(root, b) {
     if (it.chip) {
       const chip = el("div", "chip-tag", c, { marginTop: "24px", background: C.good }, it.chip.text);
       tl.set(chip, { opacity: 0 }, 0);
-      popIn(chip, cue(b, it.chip.word), { opacity: 0, y: 0, scale: 0.6 });
+      reveal(chip, cue(b, it.chip.word), "icon");
     }
   });
+  row.style.left = (1920 - row.offsetWidth) / 2 + "px";
 }
 
 // chips: a grid of short labelled cards, each later tagged; or, with focus, a few full cards above dim chips.
@@ -324,10 +330,12 @@ function sceneChips(root, b) {
     h.appendChild(document.createTextNode(post));
   }
   const items = s.items.map((it) => (typeof it === "string" ? { text: it } : it));
-  const spread = (list, [w0, w1], from) => {
+  // role: a reveal role ("card", "icon", ...) or a popIn from-state
+  const spread = (list, [w0, w1], role) => {
     const a = cue(b, w0);
     const z = cue(b, w1);
-    list.forEach((n, i) => popIn(n, a + ((z - a) * i) / Math.max(1, list.length - 1), from));
+    const at = (i) => a + ((z - a) * i) / Math.max(1, list.length - 1);
+    list.forEach((n, i) => (typeof role === "string" ? reveal(n, at(i), role) : popIn(n, at(i), role)));
   };
   root.dataset.fit = "fill"; // the assembly scales the grid to fill the free area (FILL_W of its width)
   if (s.focus) return chipsFocus(root, b, s, items, spread);
@@ -349,8 +357,8 @@ function sceneChips(root, b) {
     return { c, tag };
   });
   tl.set(chips.flatMap((k) => [k.c, k.tag].filter(Boolean)), { opacity: 0 }, 0);
-  spread(chips.map((k) => k.c), s.in, { opacity: 0, y: 0, scale: 0.8 });
-  if (s.tag) spread(chips.map((k) => k.tag), s.tagIn, { opacity: 0, y: 0, scale: 0.6 });
+  spread(chips.map((k) => k.c), s.in, "card");
+  if (s.tag) spread(chips.map((k) => k.tag), s.tagIn, "icon");
 }
 function chipsFocus(root, b, s, items, spread) {
   const FH = 360, FG = 40, RH = 72, RG = 24, MAX_W = 560;
@@ -380,11 +388,11 @@ function chipsFocus(root, b, s, items, spread) {
   tl.set(focus.flatMap((f) => [f.c, f.d].filter(Boolean)), { opacity: 0 }, 0);
   // focus cards enter on their own word when they name one, otherwise spread over s.in
   const timed = focus.filter((f) => f.word);
-  timed.forEach((f) => popIn(f.c, cue(b, f.word), { opacity: 0, y: 24 }));
+  timed.forEach((f) => reveal(f.c, cue(b, f.word), "card"));
   const untimed = focus.filter((f) => !f.word).map((f) => f.c);
-  if (untimed.length) spread(untimed, s.in, { opacity: 0, y: 24 });
-  popIn(group, cue(b, s.restIn), { opacity: 0, y: 0 });
-  if (s.detailIn) spread(focus.map((f) => f.d).filter(Boolean), s.detailIn, { opacity: 0, x: -16 });
+  if (untimed.length) spread(untimed, s.in, "card");
+  if (rest.length) reveal(group, cue(b, s.restIn), "text");
+  if (s.detailIn) spread(focus.map((f) => f.d).filter(Boolean), s.detailIn, "text");
 }
 // a dim chip with no words (restText: false): it counts, but carries no jargon
 function blankChip(parent, x, y, w, h) {

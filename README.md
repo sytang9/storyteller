@@ -65,6 +65,11 @@ and it never suggests one for a simple report.
 - A direction step picks one of six looks, a set of transitions, and a picture for each idea. A check stops a
   video whose scenes, pace or cuts all look the same.
 - Scenes include large statements, before-and-after panels, diagrams that draw themselves, and layers in 3D.
+- Two levels. Template scenes are quick and clear. Bespoke scenes give each idea its own designed scene: one agent
+  per scene works from a brief, a critic reviews the frames, and fixers apply the critic's points. The bespoke
+  level costs much more (about 55-60M tokens), so the skill asks first.
+- Icons and pictures come from open-licence sources only, with a credits file; a frame scan catches flicker
+  that still frames cannot show.
 - Real screens come from read-only browser stills, with a camera that zooms to what the voice names.
 - HyperFrames renders the motion and the captions; a 30 s draft renders in about 20 s.
 

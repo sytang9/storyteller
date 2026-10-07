@@ -7,6 +7,10 @@ built and the next transition has not started) and writes `qc/<id>.png` and `qc/
 yourself first: the named thing is visible and readable in a 640 px wide frame, and no private data shows (blur it
 in the still).
 
+`python3 scripts/frame_scan.py <video> hf/data.js` reads every frame and fails on a one-frame flash (a seek bug
+that blanks frames reads as a strobe; a contact sheet cannot show it) and on a scene area left empty for over 0.5 s.
+Run it on every render before the critic.
+
 ## The critic (a fresh subagent, frames only)
 
 Run it after the scripts pass. Give it `qc/sheet.png`, the per-beat frames, `direction.md` and `beats.timed.json`,

@@ -21,6 +21,7 @@ exists. Write two files in the teaser folder:
 4. **Rhythm map**: the beat lengths in seconds, the held beat (1.2-2.5 s) after the key picture, one fast run (2-3
    short beats) for a list or a sequence, and the longest beats on the mechanism.
 5. **Transition grammar**: one primary kind for most cuts, one or two accents with a reason each (below).
+   **Event voice**: the primary event kind and two accents for this look (below).
 6. **Bans**: the standing list below, plus the defaults you see in your own first draft.
 
 ## Looks (`assets/hf/presets.json`)
@@ -51,11 +52,42 @@ Over a `ui` screenshot the theme does not apply; the still keeps its own colours
 The primary carries at least half the cuts. Use `zoom` at most twice. Beats that share a hero keep it across any
 cut; give them `fade` or `calm`.
 
+## Change rate and the event voice
+
+A beat that builds its picture and then sits still reads as a slide. Aim for a change every 1.5-3 s of voice
+(4-6 in a 9 s explain beat, 2-3 in a statement, none in the held beat), and add them in this order:
+
+1. **Spread the scene's own reveals** across the voice: give `compare` items, diagram nodes and edges, and counters
+   their own words, so the picture builds as it is explained instead of arriving at once.
+2. **Change the state** where the idea changes: `swap` (old to new), `strike` with `to`, `number`, a `push` into the
+   part the voice turns to.
+3. **Change the size**: `lift` the key word out of the captions, or a `hero` word, at least 3 times a video. This is
+   what makes the type itself move; a video of same-size labels feels flat however busy it is. Lift a word that is
+   not on screen yet (a statement already shows its words large), and lift on the word the lifted text starts with.
+4. **Annotate last**: `note` and `mark` support the other changes; at most 2 a beat. Annotations alone make a video
+   busier, not more varied.
+
+Each event must say what it shows; one that only fills a gap does not belong. Give each video one primary kind and
+two accents, keyed to the look, and cap any one kind (except `push`) at 40% of the events; when the primary is `lift`
+or `hero`, the two count together and may reach 60%:
+
+| look | primary | accents | avoid |
+| --- | --- | --- | --- |
+| `paper` | `lift` | `mark` sweep, `number` | `hero` above 2x the heading size |
+| `editorial` | `strike` with `to` | `lift`, `note` | italic accent words |
+| `poster` | `hero` | `swap`, `lift` | long lists |
+| `night` | `number` | `push`, `lift` | `hero` above 2.5x |
+| `forest` | `lift` | `push`, `mark` sweep | rapid `swap` runs |
+| `blueprint` | `note` | `lift`, `mark` circle | decorative type effects |
+
+Name the primary and accents in `direction.md`.
+
 ## Variety budget (`scripts/check_variety.py`)
 
 No 3 neighbouring beats with one scene type; no motion type on more than 25% of the beats; the longest beat at
 least 2x the shortest, with one held beat; 2 or more transition kinds with one primary; a look named. Run it on
-`beats.json` after this step and on `beats.timed.json` after the voice. It must PASS before any compose.
+`beats.json` after this step and on `beats.timed.json` after the voice, where it also fails a beat with more than
+3.0 s of voice and no change on screen. It must PASS before any compose.
 
 ## Motion brief (for any scene you or a subagent design)
 

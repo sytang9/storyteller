@@ -64,3 +64,34 @@ def test_one_cut_kind_fails_and_no_primary_fails():
 
 def test_missing_look_fails():
     assert not rules(varied(), {"transition": "fade"})["look"]
+
+
+def timed(words, scene, kind="motion"):
+    cw = [{"w": w, "s": float(i), "e": i + 0.8} for i, w in enumerate(words.split())]
+    return {"id": "b01", "kind": kind, "caption_words": cw, "dur": len(cw), "scene": scene}
+
+
+def test_stillness_counts_scene_and_event_words():
+    words = "one two three four five six seven eight nine ten"
+    still = timed(words, {"type": "counters", "items": [{"word": "one"}]})
+    busy = timed(words, {"type": "counters", "items": [{"word": "one"}], "events": [{"kind": "mark", "word": "four"}, {"kind": "note", "word": ["seven", 0]}, {"kind": "hero", "word": "nine"}]})
+    assert not rules([still], {"look": "paper"})["stillness"]
+    assert rules([busy], {"look": "paper"})["stillness"]
+
+
+def test_stillness_is_skipped_before_the_voice():
+    assert "stillness" not in rules(varied())
+
+
+def test_unknown_event_kind_stops_the_check():
+    import pytest
+    words = "one two three four five six"
+    with pytest.raises(SystemExit):
+        rules([timed(words, {"type": "counters", "events": [{"kind": "sparkle", "word": "two"}]})], {"look": "paper"})
+
+
+def test_ui_focus_word_replaces_the_default_zoom_time():
+    words = "one two three four five six seven eight nine ten"
+    # the default third-of-the-way zoom (at "four") would fill the gap; focus on "one" must not get it for free
+    ui = timed(words, {"type": "ui", "focus": "one"}, kind="ui")
+    assert not rules([ui], {"look": "paper"})["stillness"]

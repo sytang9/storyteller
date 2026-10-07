@@ -1,12 +1,12 @@
 // The ui scene (generic, driven by tour data) and the press ripple. The functions use tl when the assembly calls them.
-// Helpers from index.html: el, svgEl, tl, C, LEAD, popIn, keyLabel, ENTER, EXIT, MOVE.
+// Helpers from index.html: el, svgEl, tl, C, LEAD, keyLabel, ENTER, EXIT, MOVE; reveal from motion.js.
 // ================= ui scene (generic, driven by tour data) =================
 const SHOT_W = 1568;
 const SHOT_H = 882;
 const SHOT_LEFT = 176; // .shot position in style.css
 const SHOT_TOP = 9;
 const BOX_PAD = 0.04; // pad the box by this share of the still width on each side
-const DIM_PAD = 0.015; // the dimmed hole hugs the box more tightly than the zoom region
+const DIM_PAD = 0.004; // the dimmed hole and ring hug the box (about 6 px on a 1400 px still), so a table row is framed on its own rules, not across its neighbours
 const WIDE = 0.65; // a padded box wider than this share of the still frames its text instead
 const TEXT_SPAN = 1.15; // ...with a view this many times the text width
 const ZOOM_MIN_W = 0.4; // ...but at least this share of the still width
@@ -53,7 +53,7 @@ function sceneUi(root, b) {
   const spot = el("div", "abs spot", cam, { left: pb.x0 + "px", top: pb.y0 + "px", width: pb.x1 - pb.x0 + "px", height: pb.y1 - pb.y0 + "px" });
   tl.set(cam, { x: x0, y: y0, scale: s0 }, 0);
   tl.set(spot, { opacity: 0 }, 0);
-  popIn(shot, b.start, { opacity: 0, y: 30, scale: 0.98 });
+  reveal(shot, b.start, "card", { from: "top" }); // the still unrolls down from its top edge, like a page
   let free = b.start + 0.5;
   if (u.before) {
     const before = img(u.before);
@@ -126,5 +126,6 @@ function uiLabels(root, b, v, s1, pb) {
     const w0 = Array.isArray(l.word) ? l.word : [l.word];
     tl.set(lead, { opacity: 0, scaleY: 0 }, 0);
     tl.to(lead, { opacity: 1, scaleY: 1, duration: 0.3, ease: ENTER }, cue(b, ...w0) - 0.1);
+    if (l.until) tl.to(lead, { opacity: 0, duration: 0.25, ease: EXIT }, cue(b, ...[].concat(l.until))); // leaves with its label
   });
 }
