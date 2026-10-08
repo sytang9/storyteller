@@ -38,6 +38,11 @@ Read first, in this order:
    cue, wordAt, popIn, reveal, drawLine, head, keyLabel, hero/heroGroup/heroProps, iconEl, imageEl, and the eases
    ENTER, EXIT and MOVE. Read the code; do not guess signatures.
 
+Your beat may stand on its own ground (`scene.ground` in the brief): take every colour from the CSS variables
+(`var(--bg)`, `var(--ink)`, `var(--mute)`, `var(--surface)`) and the role helpers, never from hex values copied from
+direction.md, so the ground can change under you. A `type_beat` brief makes the words the picture: frame-wide, kinetic,
+no diagram.
+
 Write your module as <teaser>/<id>.js, wrapped in an IIFE (`(function () { ... })();`): every module and the
 template load as classic scripts in one page, so a top-level `const` clashes with another file's. It registers window.SCENES["<id>.js"] = function (root, b) {...}, which reads
 b.scene (the fields already in your beat in beats.timed.json; you may add fields to YOUR beat's scene in the

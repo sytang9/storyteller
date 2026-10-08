@@ -27,7 +27,7 @@ quote, the fix. Fix the 3 worst, re-render, and stop after two rounds.
 | 6 | Hero continuity | The persistent object transforms across cuts; it is not redrawn |
 | 7 | Metaphor fit | The picture matches its row in the metaphor table; it is not a default card grid |
 | 8 | Direction match | Palette, type, shapes and colour roles follow `direction.md` |
-| 9 | Variety | On the sheet no 3 neighbours share one layout; one held beat exists |
+| 9 | Variety | On the sheet no 3 neighbours share one layout or one ground; one held beat exists; colour fills a large area on at least a third of the frames; at least 2 frames where the words are the picture |
 | 10 | Bans | No item from the ban list appears |
 | 11 | Defects | No overlap, clipping, off-frame text, or label over the text it names |
 

@@ -103,7 +103,23 @@ Name the primary and accents in `direction.md`.
 No 3 neighbouring beats with one scene type; no motion type on more than 25% of the beats; the longest beat at
 least 2x the shortest, with one held beat; 2 or more transition kinds with one primary; a look named. Run it on
 `beats.json` after this step and on `beats.timed.json` after the voice, where it also fails a beat with more than
-3.0 s of voice and no change on screen. It must PASS before any compose.
+3.0 s of voice and no change on screen. It also needs 3 grounds, 2 type beats and, past 60 s, one break (below).
+It must PASS before any compose.
+
+## Grounds, type beats and breaks
+
+One look sets the faces and the colour roles; the ground under each beat may change. A video on one ground for its
+whole length reads as one long slide.
+- **Grounds**: `direction.json` `"grounds": {"<name>": {bg, ink, mute, surface?, line?, em?, pattern?}}`, and each
+  beat names one in `scene.ground` (none = the look's own). Plan 3-4 per video: the look's ground, its light or dark
+  opposite, a full-bleed field in one role colour (the role then means "this beat is about <role>"), and a pattern
+  (`dots`, `grid`, `stripes`). Change ground per act, or to mark a turn in the argument; never 3 beats in a row on one.
+  `build.py` fails a ground whose ink or mute is under 4.5:1 on its bg.
+- **Type beats** (`scene.type_beat: true`, at least 2): the words are the picture. One to three words fill the frame
+  width (sliced, stacked, built from shapes or particles, rolled), on a field or pattern ground, with no diagram.
+  Put them on the claim the viewer must remember and on the turn ("Same roads?").
+- **Breaks** (`"kind": "break"`, `"dur"` 0.5-3.0 s, no caption): a silent graphic beat between acts (a shape that
+  morphs, a pattern that wipes, the next act's word). Any video over 60 s has one.
 
 ## Motion brief (for any scene you or a subagent design)
 

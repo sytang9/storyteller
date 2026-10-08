@@ -34,6 +34,7 @@
         ["bg", "surface", "ink", "mute", "line", "accent", "em", "blue", "teal", "purple", "orange", "good"].map((k) => [k, tok(k)]),
       );
       C.onAccent = tok("on-accent");
+      const BASE_C = { ...C }; // the look's colours; a beat's ground swaps C while that beat builds
       gsap.registerPlugin(CustomEase);
       // motion vocabulary (Material 3 shapes): entrances decelerate, exits accelerate, moves use the emphasized curve
       const ENTER = CustomEase.create("enter", "0.05,0.7,0.1,1");
@@ -195,6 +196,12 @@
         D.beats.forEach((b, i) => {
           const next = D.beats[i + 1];
           const root = el("div", "abs scene", stage, { height: FRAME_H + "px" });
+          // the beat's ground (direction.json "grounds"): its colour tokens apply to everything inside this scene
+          if (b.ground) {
+            Object.entries(b.ground.vars).forEach(([k, v]) => root.style.setProperty("--" + k, v));
+            if (b.ground.pattern) root.classList.add("pat-" + b.ground.pattern);
+          }
+          Object.assign(C, BASE_C, b.ground ? b.ground.vars : {}); // C and col() follow this beat's ground
           const type = b.kind === "ui" ? "ui" : b.scene && b.scene.type;
           // custom: a module next to the beats file registers window.SCENES["<file>.js"] (build.py loads it)
           const build = type === "ui" ? sceneUi : window.SCENES[type === "custom" ? b.scene.module : type];
@@ -202,6 +209,7 @@
           build(root, b);
           if (b.kind !== "ui") (b.scene.labels || []).forEach((l) => keyLabel(root, b, l));
           runEvents(root, b); // events.js: word-timed changes on top of the scene
+          Object.assign(C, BASE_C);
           // the camera wraps the body (not the heading), so an event can push in on part of the scene
           const cam = el("div", "abs scene-body", root, { height: FRAME_H + "px", transformOrigin: "0 0" });
           const body = el("div", "abs scene-body", cam, { height: FRAME_H + "px" });
@@ -237,7 +245,10 @@
         const CAPTION_LEAD = 0.05; // the highlight leads the audio by about one frame and a half
         const SPANS = {}; // caption word spans by beat id and word index, for lift events
         // burned captions only in "full" mode; the VTT is always written
-        if (D.captions === "full") D.beats.forEach((b) =>
+        // the band takes each beat's ground (bg, ink, mute), so a cream or field beat has no dark strip under it
+        if (D.captions === "full") D.beats.forEach((b) => {
+          const g = { ...BASE_C, ...(b.ground ? b.ground.vars : {}) };
+          tl.set(band, { "--bg": g.bg, "--ink": g.ink, "--mute": g.mute }, b.start);
           b.phrases.forEach((p) => {
             const box = el("div", "abs phrase", band);
             const para = el("p", "", box);
@@ -247,12 +258,12 @@
               const span = el("span", "", para, {}, w.w);
               (SPANS[b.id] = SPANS[b.id] || {})[k] = span;
               // the word brightens as it is spoken; no accent colour, which would collide with the colour roles
-              tl.set(span, { color: C.ink }, w.s - CAPTION_LEAD);
+              tl.set(span, { color: g.ink }, w.s - CAPTION_LEAD);
             });
             tl.set(box, { opacity: 1 }, p.show);
             tl.set(box, { opacity: 0 }, p.hide);
-          }),
-        );
+          });
+        });
 
         // the end card (direction.json "end"): the last scene clears and the report's name holds on the ground
       if (D.end) {

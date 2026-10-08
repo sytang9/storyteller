@@ -84,7 +84,7 @@ def test_every_look_keeps_text_readable(name):
 def test_direction_writes_theme_and_rejects_unknown_values(tmp_path):
     d = tmp_path / "direction.json"
     d.write_text(json.dumps({"look": "night", "override": {"accent": "#ff8800"}, "transition": "push", "hold": 0.5}))
-    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5, "end": None}
+    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5, "end": None, "grounds": {}}
     theme = (tmp_path / "theme.css").read_text()
     assert "--accent: #ff8800;" in theme and '--display-base: "Space Grotesk Video"' in theme
     for bad in ({"look": "neon"}, {"look": "_doc"}, {"look": "paper", "transition": "spin"}, {"look": "paper", "end": {"sub": "x"}}):
@@ -116,3 +116,50 @@ def test_direction_tokens_cannot_carry_css(tmp_path):
         d.write_text(json.dumps({"look": "paper", "override": bad}))
         with pytest.raises(SystemExit):
             load_direction(d, tmp_path)
+
+
+from build import beat_ground, break_beat
+
+
+def test_grounds_load_validate_and_resolve_per_beat(tmp_path):
+    d = tmp_path / "direction.json"
+    grounds = {"field": {"bg": "#f36d3e", "ink": "#10141c", "mute": "#2a1408"},
+               "cream": {"bg": "#f4efe6", "ink": "#16130f", "mute": "#5c564c", "pattern": "dots"}}
+    d.write_text(json.dumps({"look": "night", "grounds": grounds}))
+    look = load_direction(d, tmp_path)
+    assert set(look["grounds"]) == {"field", "cream"}
+    assert beat_ground({"ground": "cream"}, look["grounds"], "b1") == {"vars": {"bg": "#f4efe6", "ink": "#16130f", "mute": "#5c564c"}, "pattern": "dots"}
+    assert beat_ground({}, look["grounds"], "b1") is None  # no ground: the look's own
+    with pytest.raises(SystemExit):
+        beat_ground({"ground": "neon"}, look["grounds"], "b1")
+
+
+def test_grounds_reject_css_unknown_patterns_and_low_contrast(tmp_path):
+    d = tmp_path / "direction.json"
+    for bad in ({"g": {"bg": "red; } x{", "ink": "#000000", "mute": "#333333"}},
+                {"g": {"bg": "#ffffff", "ink": "#000000", "mute": "#333333", "pattern": "url(x)"}},
+                {"g": {"bg": "#ffffff", "ink": "#eeeeee", "mute": "#333333"}},  # ink unreadable
+                {"g": {"bg": "#ffffff", "ink": "#000000"}},  # mute missing
+                {"Bad Name": {"bg": "#ffffff", "ink": "#000000", "mute": "#333333"}}):
+        d.write_text(json.dumps({"look": "paper", "grounds": bad}))
+        with pytest.raises(SystemExit):
+            load_direction(d, tmp_path)
+
+
+def test_break_beats_are_short_and_silent():
+    assert break_beat({"id": "x1", "kind": "break", "dur": 1.2, "scene": {"type": "statement"}}) == 1.2
+    assert break_beat({"id": "b1", "kind": "voice"}) is None
+    for bad in ({"id": "x", "kind": "break", "dur": 4.0}, {"id": "x", "kind": "break"},
+                {"id": "x", "kind": "break", "dur": 1.0, "caption": "words"}):
+        with pytest.raises(SystemExit):
+            break_beat(bad)
+
+
+def test_grounds_may_retune_role_colours_but_keep_them_visible(tmp_path):
+    d = tmp_path / "direction.json"
+    ok = {"cream": {"bg": "#f2ede4", "ink": "#10141c", "mute": "#4a525e", "teal": "#0b7a70", "orange": "#c4461a"}}
+    d.write_text(json.dumps({"look": "night", "grounds": ok}))
+    assert load_direction(d, tmp_path)["grounds"]["cream"]["teal"] == "#0b7a70"
+    d.write_text(json.dumps({"look": "night", "grounds": {"cream": {**ok["cream"], "teal": "#89f0e5"}}}))  # pale teal on cream
+    with pytest.raises(SystemExit):
+        load_direction(d, tmp_path)

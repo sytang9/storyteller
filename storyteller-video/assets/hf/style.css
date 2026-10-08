@@ -88,7 +88,11 @@ body {
 
 /* each scene stands on its own ground, so an incoming wipe or push covers the outgoing scene instead of printing
    over it */
-.scene { background: var(--bg); }
+.scene { background: var(--bg); color: var(--ink); } /* re-resolved per scene, so a beat's ground sets its text colour */
+/* ground patterns (direction.json grounds[].pattern), drawn in a faint tint of the ground's own ink */
+.scene.pat-dots { background-image: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 2.5px, transparent 3px); background-size: 56px 56px; }
+.scene.pat-grid { background-image: linear-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 2px, transparent 2px), linear-gradient(90deg, color-mix(in srgb, var(--ink) 10%, transparent) 2px, transparent 2px); background-size: 96px 96px; }
+.scene.pat-stripes { background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 9%, transparent) 0 18px, transparent 18px 52px); }
 /* scene area: everything above the caption band */
 #stage {
   left: 0;

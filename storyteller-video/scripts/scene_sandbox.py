@@ -27,8 +27,11 @@ def make(teaser, bin_dir, ids):
         (box / "voice").mkdir(parents=True, exist_ok=True)
         (box / "shots").mkdir(exist_ok=True)
         shutil.copytree(TEMPLATE, box / "hf", dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
-        shutil.copytree(bin_dir, box / "hf/.bin", dirs_exist_ok=True, symlinks=True)
-        shutil.copy2(teaser / "voice" / f"{i}.wav", box / "voice")
+        if (box / "hf/.bin").exists():  # re-making a sandbox for a fix round
+            shutil.rmtree(box / "hf/.bin")
+        shutil.copytree(bin_dir, box / "hf/.bin", symlinks=True)
+        if beats[i].get("kind") != "break":  # a silent chapter break has no voice file
+            shutil.copy2(teaser / "voice" / f"{i}.wav", box / "voice")
         for name, target in (("media", teaser / "media"), ("shots/frames", teaser / "shots/frames")):
             link = box / name
             if target.exists() and not (link.is_symlink() or link.exists()):

@@ -27,7 +27,7 @@ after them. Fresh subagents do the work that needs a clean context, and hand off
 | Step | Who | Output |
 | --- | --- | --- |
 | 1. Script | main thread | `beats.json` (`references/script.md`); gates: `jargon_check.py`, then a cold-read subagent |
-| 2. Direction | main thread | `direction.md` + `direction.json` (`references/direction.md`); gate: `check_variety.py` |
+| 2. Direction | main thread | `direction.md` + `direction.json` with 3-4 grounds, 2 type beats and a break (`references/direction.md`); gate: `check_variety.py` |
 | 3. Voice | main thread | `voice/*.wav`, `beats.timed.json` (`scripts/tts_beats.py`) |
 | 3b. Events | main thread | `scene.events` on each beat, so no beat sits still for 3 s (`references/scenes.md`, Events); re-run `check_variety.py` on `beats.timed.json` |
 | 4. Screens | main thread | `shots/` from `scripts/record_tour.cjs` (`ui` beats only, below) |
@@ -56,14 +56,14 @@ on its still and look before you compose. Never log in to a live production syst
 cp -r <skill>/assets/hf <teaser>/hf && cd <teaser>/hf
 python3 build.py --beats ../beats.timed.json          # reads ../direction.json; --captions full is the default
 python3 -m pytest -q test_build.py
-export HYPERFRAMES_NO_TELEMETRY=1                      # ffmpeg and ffprobe on PATH
+export HYPERFRAMES_NO_TELEMETRY=1 PATH=$PWD/.bin:$PATH  # hf/.bin: symlinks to ffmpeg + ffprobe when not on PATH
 npx --yes hyperframes@0.8.126 check                    # 0 errors: render does not stop on a scene error, it ships a blank video
 npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
 ffmpeg -y -i renders/raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k ../teaser.mp4
 ```
 
 Full captions burn the narration into the bottom band, which no scene uses; `--captions keywords` shows only the
-2-5 word labels. Scene types, fields, transitions and the layout rules: `references/scenes.md`. GSAP loads from a CDN
+2-5 word labels. Keep full captions for any video that may play on mute: keyword-only captions lose much of the argument. The band takes each beat's ground. Scene types, fields, transitions and the layout rules: `references/scenes.md`. GSAP loads from a CDN
 at render time. A draft render (`--quality draft`) of a 30 s cut takes about 20 s; use it for checks.
 
 ## Length

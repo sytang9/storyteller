@@ -9,6 +9,10 @@ Each rule prints PASS or FIX; the exit code is 1 when any rule says FIX.
   tempo        the longest beat is at least 2x the shortest, and at least one beat holds (hold >= 1.2 s)
   cuts         at least 2 transition kinds; the most used kind is at least half of the cuts, morphs aside (one primary)
   look         direction.json names a look (the template's presets.json lists them)
+  grounds      at least 3 grounds in use (the look's own counts as one; direction.json "grounds" adds the rest) and
+               no 3 neighbouring beats on one ground
+  type beats   at least 2 beats where the words are the picture (scene.type_beat: true)
+  breaks       a video over 60 s has at least one silent chapter break (kind "break")
   stillness    beats.timed.json only: no 3.0 s stretch of voice with no change on screen (any word-timed field in
                the scene or its events counts; a ui beat counts its zoom and click)
 """
@@ -25,6 +29,9 @@ WORDS_PER_S = 2.4  # Kokoro at speed 0.8-0.9, for beats without a measured lengt
 HOLD_DEFAULT = 0.35  # build.py's default
 PRIMARY_MIN = 0.5
 STILL_MAX = 3.0  # s of voice with nothing new on screen
+GROUNDS_MIN = 3
+TYPE_BEATS_MIN = 2
+BREAK_AFTER = 60.0  # s of video that calls for a chapter break
 EVENT_KINDS = {"hero", "lift", "mark", "swap", "strike", "number", "note", "push"}  # assets/hf/events.js
 CONTINUOUS = {"lanes"}  # scene types that keep moving between their cue words (the lanes token walk)
 CUE_KEYS = {"cues", "word", "until", "landWord", "show", "toWord", "ofWord", "restIn", "spread", "in", "tick", "tagIn", "detailIn", "focus", "click"}
@@ -39,6 +46,8 @@ def scene_type(b):
 
 
 def length(b, hold):
+    if b.get("kind") == "break":
+        return float(b.get("dur", 0))
     spoken = b.get("dur") or len((b.get("text") or b.get("caption", "")).split()) / WORDS_PER_S
     return spoken + float(b.get("hold", hold))
 
@@ -114,8 +123,28 @@ def check(beats, direction):
 
     out.append(("look", bool(direction.get("look")), direction.get("look") or "direction.json has no look"))
 
-    if all("caption_words" in b for b in beats):
-        still = [(b["id"], still_gaps(b)) for b in beats]
+    grounds = [(b.get("scene") or {}).get("ground") or "look" for b in beats]
+    known = set(direction.get("grounds", {})) | {"look"}
+    unknown = sorted(set(grounds) - known)
+    g_runs = [i for i in range(len(grounds) - RUN_MAX) if len(set(grounds[i : i + RUN_MAX + 1])) == 1]
+    ok = len(set(grounds)) >= GROUNDS_MIN and not g_runs and not unknown
+    detail = f"{len(set(grounds))} in use ({', '.join(sorted(set(grounds)))})"
+    if unknown:
+        detail += f"; not in direction.json grounds: {', '.join(unknown)}"
+    if g_runs:
+        detail += "; " + ", ".join(f"{beats[i]['id']}..{beats[i + RUN_MAX]['id']} all on {grounds[i]}" for i in g_runs)
+    out.append(("grounds", ok, detail))
+
+    typed = [b["id"] for b in beats if (b.get("scene") or {}).get("type_beat")]
+    out.append(("type beats", len(typed) >= TYPE_BEATS_MIN, ", ".join(typed) or f"none (need {TYPE_BEATS_MIN})"))
+
+    breaks = [b["id"] for b in beats if b.get("kind") == "break"]
+    total = sum(lens)
+    out.append(("breaks", total <= BREAK_AFTER or bool(breaks), f"{', '.join(breaks) or 'none'} in {total:.0f} s"))
+
+    voiced = [b for b in beats if b.get("kind") != "break"]
+    if all("caption_words" in b for b in voiced):
+        still = [(b["id"], still_gaps(b)) for b in voiced]
         bad = [f"{i} {g:.1f} s" for i, g in still if g > STILL_MAX]
         out.append(("stillness", not bad, ", ".join(bad) or f"ok (max {max(g for _, g in still):.1f} s)"))
     return out

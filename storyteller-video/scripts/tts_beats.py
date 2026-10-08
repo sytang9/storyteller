@@ -34,6 +34,8 @@ def align(caps, spoken, total):
 
 pipe = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
 for b in beats:
+    if b.get("kind") == "break":  # a silent chapter break keeps the dur it was given
+        continue
     chunks, words, off = [], [], 0.0
     for r in pipe(b["text"], voice=VOICE, speed=b.get("speed", 0.92)):
         a = np.asarray(r.audio.cpu() if hasattr(r.audio, "cpu") else r.audio); chunks.append(a)

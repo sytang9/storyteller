@@ -16,11 +16,13 @@ The template in `assets/hf/` is a HyperFrames composition that renders a narrate
 
 ### Beat (one array item in `beats.timed.json`)
 
-- `id`: also the voice file name. `kind`: `"motion"` or `"ui"`. `caption`: the caption text. `dur`: the voice length in seconds.
+- `id`: also the voice file name. `kind`: `"motion"`, `"ui"` or `"break"` (a silent chapter break: `dur` 0.5-3.0 s, no caption, no voice file). `caption`: the caption text. `dur`: the voice length in seconds.
 - `caption_words`: `[{w, s, e}]`, with times relative to the voice start. Captions, the highlighted word and every word cue use these times.
 - `hold` (optional): seconds of silence after this beat's voice (default `direction.json` `hold`, else 0.35). A held beat (1.2-2.5 s) lets a key picture land.
 - `in` (optional): the transition into this beat: `calm`, `fade`, `cut`, `push`, `zoom`, `wipe` or `morph` (default `direction.json` `transition`). See the grammar in `references/direction.md`. `morph` also needs `scene.morph` (see Transitions below).
 - `scene`: `{type, ...fields}`, as described below. Every `word` field is a caption word, matched case-insensitively with punctuation removed (apostrophes stay: `Acme's` is its own word). A word pair `[w, n]` picks the nth match. A visual change lands 0.3 s before its word. A missing word stops the build with an error.
+- `scene.ground` (optional): a ground name from `direction.json` `grounds`; its bg, ink and mute replace the look's
+  for this beat only. `scene.type_beat: true` marks a beat whose words are the picture (`check_variety.py` counts them).
 - Colours are role keys (`accent`, `blue`, `teal`, `purple`, `orange`, `good`, `ink`, `mute`); the look sets their values. Use a literal CSS colour only for a real-world colour (a road's asphalt).
 
 ### Scene types
@@ -100,7 +102,9 @@ Fonts and measuring: the whole build runs after every bundled face has loaded (`
 cd <teaser>/hf
 python3 build.py                      # options: --src .. --beats beats.timed.json --direction ../direction.json --vtt teaser.vtt --captions keywords|full
 python3 -m pytest -q test_build.py    # phrase splitter, look contrast, direction.json
-export HYPERFRAMES_NO_TELEMETRY=1      # ffmpeg and ffprobe on PATH
+# ffmpeg + ffprobe must be on PATH. If they are not, symlink them into hf/.bin first (imageio-ffmpeg ships an ffmpeg:
+# python3 -c "import imageio_ffmpeg as m; print(m.get_ffmpeg_exe())"); scene_sandbox.py copies hf/.bin to each sandbox.
+export HYPERFRAMES_NO_TELEMETRY=1 PATH=$PWD/.bin:$PATH
 npx --yes hyperframes@0.8.126 check   # needs 0 errors
 npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
 ffmpeg -y -i renders/raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k ../teaser.mp4

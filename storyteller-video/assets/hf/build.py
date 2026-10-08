@@ -107,6 +107,11 @@ TOKEN_KEY = re.compile(r"[a-z][a-z0-9-]*")
 # token values go into a stylesheet: only colours, lengths, plain keywords, and font names from style.css
 TOKEN_VALUE = re.compile(r"#[0-9a-fA-F]{3,8}|-?\d+(\.\d+)?(px|em|rem|%)?|[a-z-]+|[A-Za-z0-9 ]+")
 FONT_KEYS = {"sans", "display", "mono", "num"}
+HEX = re.compile(r"#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}")
+ROLE_KEYS = {"accent", "blue", "teal", "purple", "orange", "good"}
+GROUND_KEYS = {"bg", "ink", "mute", "surface", "line", "em"} | ROLE_KEYS  # colour tokens a ground may set for its beats
+PATTERNS = {"dots", "grid", "stripes"}  # index.html draws them in the ground's line colour
+BREAK_DUR = (0.5, 3.0)  # a silent chapter break, s
 
 
 def check_tokens(tokens):
@@ -117,6 +122,65 @@ def check_tokens(tokens):
             raise SystemExit(f"look token {k!r}: {v!r} is not a plain colour, length, keyword or name")
         if k in FONT_KEYS and v not in fonts:
             raise SystemExit(f"look token {k!r}: font {v!r} has no @font-face in style.css")
+
+
+def contrast(a, b):
+    """WCAG contrast ratio of two #rgb / #rrggbb colours."""
+    def lum(h):
+        h = h.lstrip("#")
+        h = "".join(c * 2 for c in h) if len(h) == 3 else h
+        c = [int(h[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+    hi, lo = sorted([lum(a), lum(b)], reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def check_grounds(grounds):
+    """direction.json "grounds": named grounds a beat can stand on, inside the one look. Each sets bg, ink and mute
+    (plus surface, line, em) and may add a pattern; text on it must stay readable (4.5:1)."""
+    for name, g in grounds.items():
+        if not SAFE_ID.fullmatch(name):
+            raise SystemExit(f"ground {name!r}: use lowercase letters, digits, - and _")
+        missing = {"bg", "ink", "mute"} - set(g)
+        if missing:
+            raise SystemExit(f"ground {name!r} needs {sorted(missing)}")
+        for k, v in g.items():
+            if k == "pattern":
+                if v not in PATTERNS:
+                    raise SystemExit(f"ground {name!r}: pattern {v!r} not in {sorted(PATTERNS)}")
+            elif k not in GROUND_KEYS or not HEX.fullmatch(str(v)):
+                raise SystemExit(f"ground {name!r}: {k!r}: {v!r} must be one of {sorted(GROUND_KEYS)} as a #hex colour")
+        for k in ("ink", "mute"):
+            if contrast(g[k], g["bg"]) < 4.5:
+                raise SystemExit(f"ground {name!r}: {k} on bg is {contrast(g[k], g['bg']):.1f}:1, needs 4.5:1")
+        for k in ROLE_KEYS & set(g):  # a light ground retunes the roles a dark look made pale
+            if contrast(g[k], g["bg"]) < 3:
+                raise SystemExit(f"ground {name!r}: role {k} on bg is {contrast(g[k], g['bg']):.1f}:1, needs 3:1")
+
+
+def beat_ground(scene, grounds, beat_id):
+    """The ground a beat stands on ({vars, pattern}), or None for the look's own."""
+    name = scene.get("ground")
+    if not name:
+        return None
+    if name not in grounds:
+        raise SystemExit(f"beat {beat_id}: ground {name!r} not in direction.json grounds {sorted(grounds)}")
+    g = grounds[name]
+    return {"vars": {k: v for k, v in g.items() if k != "pattern"}, "pattern": g.get("pattern")}
+
+
+def break_beat(b):
+    """A silent chapter break (kind "break") returns its length; a voiced beat returns None."""
+    if b.get("kind") != "break":
+        return None
+    dur = b.get("dur")
+    if not isinstance(dur, (int, float)) or not BREAK_DUR[0] <= dur <= BREAK_DUR[1]:
+        raise SystemExit(f"beat {b.get('id')}: a break needs dur between {BREAK_DUR[0]} and {BREAK_DUR[1]} s")
+    if b.get("caption") or b.get("text"):
+        raise SystemExit(f"beat {b.get('id')}: a break is silent; drop its caption and text")
+    return float(dur)
 
 
 def safe_id(i):
@@ -154,7 +218,9 @@ def load_direction(path, out=HERE):
     end = direction.get("end")
     if end and not end.get("title"):
         raise SystemExit("direction.json end needs a title (the report's name), and may take sub and dur")
-    return {"look": look, "in": default_in, "hold": float(direction.get("hold", HOLD)), "end": end}
+    grounds = direction.get("grounds", {})
+    check_grounds(grounds)
+    return {"look": look, "in": default_in, "hold": float(direction.get("hold", HOLD)), "end": end, "grounds": grounds}
 
 
 DIGITS = "U+0030-0039, U+0025"  # 0-9 and %
@@ -210,12 +276,18 @@ def main():
         if kind_in not in TRANSITIONS:
             raise SystemExit(f"beat {b['id']}: in {kind_in!r} not in {sorted(TRANSITIONS)}")
         vstart = t + VOICE_LEAD
+        silent = break_beat(b)
+        if silent is not None:  # a chapter break: no voice, no caption, no hold
+            b, hold = {**b, "dur": silent, "caption": "", "caption_words": []}, 0.0
         words = [{"w": w["w"], "s": round(vstart + w["s"], 3), "e": round(vstart + w["e"], 3)} for w in b["caption_words"]]
-        shutil.copy2(src / "voice" / f"{b['id']}.wav", HERE / "assets/voice" / f"{b['id']}.wav")
+        if silent is None:
+            shutil.copy2(src / "voice" / f"{b['id']}.wav", HERE / "assets/voice" / f"{b['id']}.wav")
+        scene = load_scene(b, beats_path.parent)
         beat = {
-            "id": safe_id(b["id"]), "kind": b["kind"], "scene": load_scene(b, beats_path.parent), "caption": b["caption"],
+            "id": safe_id(b["id"]), "kind": b["kind"], "scene": scene, "caption": b["caption"],
             "start": round(t, 3), "vstart": round(vstart, 3), "dur": b["dur"],
             "end": round(t + b["dur"] + hold, 3), "in": kind_in, "words": words,
+            "ground": beat_ground(scene, look["grounds"], b["id"]),
         }
         check_words(b, beat["scene"], words)
         if beat["scene"]["type"] == "custom":
@@ -241,12 +313,13 @@ def main():
         t += b["dur"] + hold
 
     total = round(out[-1]["vstart"] + out[-1]["dur"] + TAIL, 2)
+    voiced = [b for b in out if b["kind"] != "break"]
     end = None
     if look["end"]:  # an end card after the last voice: the report's name and where to find it
         end = {"title": look["end"]["title"], "sub": look["end"].get("sub", ""), "start": total, "credits": []}
         total = round(total + float(look["end"].get("dur", END_DUR)), 2)
     for i, beat in enumerate(out):
-        groups = split_phrases(beat["words"], beat["caption"])
+        groups = split_phrases(beat["words"], beat["caption"]) if beat["words"] else []
         last_end = (out[i + 1]["start"] - HIDE_BEFORE_NEXT) if i + 1 < len(out) else (end["start"] - HIDE_BEFORE_NEXT if end else total)
         beat["phrases"] = []
         for j, g in enumerate(groups):
@@ -268,7 +341,7 @@ def main():
     audio = "\n".join(
         f'      <audio id="vo-{b["id"]}" src="assets/voice/{b["id"]}.wav" data-start="{b["vstart"]}" '
         f'data-duration="{b["dur"]}" data-track-index="{10 + k}"></audio>'
-        for k, b in enumerate(out)
+        for k, b in enumerate(voiced)
     )
     html = (HERE / "index.html").read_text()
     html = re.sub(r'(data-composition-id="main"[^>]*?data-duration=")[^"]*"', rf'\g<1>{total}"', html, count=1, flags=re.S)
