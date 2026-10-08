@@ -1,6 +1,6 @@
 ---
 name: storyteller
-description: Turns technical work (results, investigations, studies, proposals, status updates, bloated reports) into one illustrated, plain-language HTML story a non-expert can follow, keeping every number, caveat and decision. The default for any report, write-up or summary page a person reads, eli5 versions, /html-report with /eli5, "make this readable". Not for system-book, PR reviews, dashboards, videos, fiction or Storybook.js.
+description: Turns technical work (results, investigations, studies, proposals, status updates, bloated reports) into one illustrated, plain-language HTML story a non-expert can follow, keeping every number, caveat and decision. The default for any report, write-up or summary page a person reads, and "make this readable". Not for /eli5 explainers (the eli5 plugin), system-book, PR reviews, dashboards, videos, fiction or Storybook.js.
 ---
 
 # Storyteller

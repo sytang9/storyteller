@@ -100,11 +100,11 @@ Fonts and measuring: the whole build runs after every bundled face has loaded (`
 cd <teaser>/hf
 python3 build.py                      # options: --src .. --beats beats.timed.json --direction ../direction.json --vtt teaser.vtt --captions keywords|full
 python3 -m pytest -q test_build.py    # phrase splitter, look contrast, direction.json
-export HYPERFRAMES_NO_TELEMETRY=1 PATH=$PWD/.bin:$PATH
+export HYPERFRAMES_NO_TELEMETRY=1      # ffmpeg and ffprobe on PATH
 npx --yes hyperframes@0.8.126 check   # needs 0 errors
 npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
-.bin/ffmpeg -y -i renders/raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k ../teaser.mp4
-.bin/ffmpeg -y -ss 11.8 -i ../teaser.mp4 -frames:v 1 -q:v 3 ../poster.jpg
+ffmpeg -y -i renders/raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k ../teaser.mp4
+ffmpeg -y -ss <t of the held beat> -i ../teaser.mp4 -frames:v 1 -q:v 3 ../poster.jpg
 ```
 
 Captions: `--captions full` (the default) burns the phrase captions into the reserved bottom band, where no scene content goes, and keeps the `labels`. `--captions keywords` burns no sentence text; the headlines and `labels` carry the story, and the bottom 180 px stay free for a player's captions. Both modes write the VTT.
