@@ -100,7 +100,7 @@ tl.fromTo(field, { scaleX: 3, scaleY: 6 }, { scaleX: 1, scaleY: 1, duration: 0.8
 
 ## 6. Composition for motion
 
-- Lay out at full scene size (1920 x 900 px). Make the content span 80% or more of the 1680 px working width. The fit scales up 1.3x at most, so a small layout stays small (`FIT_MAX` in `index.html`).
+- Lay out at full scene size (1920 x 900 px). Make the content span 80% or more of the 1680 px working width. The fit scales up 1.6x (`FIT_MAX`), 2x at most (`FIT_HARD`, both in `index.html`), so a small layout stays small.
 - Big shapes: bars and fields 120-200 px thick; a colour field may fill 30-60% of the frame. Separate objects by fill, not by 2 px borders. A stroke that must show is 3-4 px.
 - Scale contrast: one element per scene is at least 2x the next tier. Hero to body is 1.6x for calm looks, 2.1x by default, 3x for `poster`.
 - Three depth tiers: focal (opacity 1, role colour), context (opacity 0.4-0.5 or `mute`; scale 0.9 when receded), furniture (eyebrow, axes, ticks: `mute`, 24 px). Move the tiers when the subject changes; the example dims the total at the split. Blur a receded layer only rarely: set 2-4 px, do not tween it.

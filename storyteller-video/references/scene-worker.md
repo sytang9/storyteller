@@ -77,7 +77,7 @@ Fix them and anything else section 1 or the checklist flags in your scene.
 Rules: edit only <teaser>/<id>.js and your sandbox <teaser>/work/<id>/ (its beats.timed.json holds your scene fields;
 change fields there if needed and list them). Keep the voice, timing, colours and the brief's message. Labels
 and kickers of your scene must be gone by your beat's end (the next beat may push or wipe in over you).
-Test exactly as in <teaser>/work/WORKER.md (cp module into sandbox, build.py, hyperframes check 0 errors, draft render,
+Test exactly as in <skill>/references/scene-worker.md, "The worker prompt" (cp module into sandbox, build.py, hyperframes check 0 errors, draft render,
 frames at the beat start +0.1, +0.5, +1.0 s, at each anchor word +0.6 s and at the end; LOOK at them).
 Write <sandbox>/status_fix1.json {"status", "fixed": [...], "fields_changed": {...}, "frames": [...],
 "concerns": [...]} and return one line with its path.

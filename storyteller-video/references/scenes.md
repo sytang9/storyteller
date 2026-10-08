@@ -41,7 +41,7 @@ The template in `assets/hf/` is a HyperFrames composition that renders a narrate
 | `ui` | `eyebrow?`, `title?`, `focus?`, `nth?`, `click?`, `text?`, `labels?` | The tour still for this beat. Give it an `eyebrow` and a `title` that name the screen and its point, so the claim
 reads with the sound off; the still then fits below the heading. The camera zooms to the tour box and settles 0.3 s before `focus` (default: the word one third of the way in). If the tour has a `before` still, a cursor click lands before `click` (default: the 2nd word). `text: {x0, y0, x1, y1}` overrides the tour's text box, to crop on word boundaries. The box gets a soft dim around it and a thin accent outline (3 px, rounded, `.ring`), so it shows on dark stills too. Labels here use `at: [x, y]` in still pixels (only `x` places them) and default to the dark tag style: they sit in a strip below the still, with a leader up to the box. The ui fit includes that strip, so the still shrinks and the labels stay above the caption band in `full` mode. |
 
-`eyebrow` is plain text, which CSS sets in mono caps. Keep a `title` to 8 words or fewer.
+`eyebrow` is plain text, which CSS sets in tracked caps in the body face (`.t-eyebrow`, 28 px). Keep a `title` to 8 words or fewer.
 
 Fields every scene takes:
 
