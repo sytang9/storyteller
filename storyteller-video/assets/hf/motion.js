@@ -1,6 +1,6 @@
 // Motion and framing: role-aware entrances, the fit, the arrow check and the morph match cut. Loaded after the helpers in
 // index.html; every function adds to the shared tl when the assembly calls it.
-// Helpers from index.html: el, tl, D, MOVE, EXIT, and the fit constants (FIT_*, FILL_*, FRAME_H, UI_MARGIN).
+// Helpers from index.html: el, tl, D, MOVE, EXIT, and the fit constants (FIT_*, FILL_*, FRAME_H, CONTENT_H, UI_MARGIN).
 
 // Two arrival speeds and a camera curve, picked by distance and role (one look for everything reads as a template):
 const ARRIVE = { duration: 0.7, ease: "expo.out" }; // text, numbers, cards: a long arrival that settles slowly
@@ -135,7 +135,7 @@ function fitParams(box, mode) {
   if (!(box.x0 < box.x1)) return { tx: 0, ty: 0, sc: 1 };
   const isUi = mode === "ui" || mode === "ui-head";
   const top = mode === "ui" ? UI_MARGIN : FIT_TOP;
-  const bottom = isUi ? FRAME_H - UI_MARGIN : FIT_BOTTOM;
+  const bottom = isUi ? CONTENT_H - UI_MARGIN : FIT_BOTTOM;
   const left = isUi ? UI_MARGIN : FIT_X;
   const bw = box.x1 - box.x0;
   const bh = box.y1 - box.y0;

@@ -117,16 +117,17 @@ body {
   gap: 16px;
 }
 /* caption band: bottom 180 px, scene content never enters it */
+/* caption overlay: no block; a soft fade in the current beat's ground (index.html sets --bg per beat) */
 #band {
   left: 0;
-  top: 900px;
+  top: 840px;
   width: 1920px;
-  height: 180px;
-  background: var(--bg);
+  height: 240px;
+  background: linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--bg) 62%, transparent) 42%, color-mix(in srgb, var(--bg) 82%, transparent) 100%);
 }
 .phrase {
   left: 0;
-  top: 0;
+  top: 60px;
   width: 1920px;
   height: 180px;
   display: flex;
@@ -143,6 +144,7 @@ body {
   line-height: 1.25;
   letter-spacing: -0.015em;
   color: var(--mute); /* words not yet spoken */
+  text-shadow: 0 0 18px var(--bg), 0 0 6px var(--bg); /* a halo in the ground colour keeps words legible over art */
 }
 /* shared parts */
 .card {

@@ -46,7 +46,8 @@
       const D = window.TEASER;
       // the free area a scene body is fitted into (the assembly below); scenes may read it to pick a layout
       const IS_FULL = D.captions === "full";
-      const FRAME_H = IS_FULL ? 900 : 1080; // keywords mode uses the whole frame; full mode keeps the caption band
+      const FRAME_H = 1080; // every scene and its ground fill the whole frame; captions overlay the bottom
+      const CONTENT_H = IS_FULL ? 900 : 1080; // scene content stays above the caption overlay in full mode
       // a scene grows to FIT_MAX, or further (to FIT_HARD) until its box spans FIT_FILL of the free width or height,
       // so a small picture does not sit in an empty frame; the free area itself is never exceeded
       const FIT_MAX = 1.6;
@@ -54,7 +55,7 @@
       const FIT_HARD = 2;
       const FIT_X = 120; // side margin, the same as the heading
       const FIT_TOP = 216; // below the heading
-      const FIT_BOTTOM = FRAME_H - (IS_FULL ? 24 : 56); // a quiet bottom margin, not an empty band
+      const FIT_BOTTOM = CONTENT_H - (IS_FULL ? 24 : 56); // a quiet bottom margin above the captions
       const UI_MARGIN = 40; // ui scenes have no heading
       // fill: a scene that sets root.dataset.fit = "fill" (grids of cards) is scaled to FILL_W of the free width
       // (or to the free height, if that is smaller), up or down; it lays out so that this scale keeps text >= 32 px

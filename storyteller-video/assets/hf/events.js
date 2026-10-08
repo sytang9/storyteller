@@ -193,7 +193,7 @@ window.finishEvents = function (bodies, SPANS) {
   window.PUSHES.forEach(({ b, e, box, t }) => {
     const q = byId[b.id];
     const ui = b.kind === "ui" && !(b.scene.eyebrow || b.scene.title);
-    const [top, bottom] = ui ? [UI_MARGIN, FRAME_H - UI_MARGIN] : [FIT_TOP, FIT_BOTTOM];
+    const [top, bottom] = ui ? [UI_MARGIN, CONTENT_H - UI_MARGIN] : [FIT_TOP, FIT_BOTTOM];
     const bw = q.f.sc * (box.x1 - box.x0);
     const bh = q.f.sc * (box.y1 - box.y0);
     // the zoomed box must fit the free area with a margin, so a push never pushes the target out of frame

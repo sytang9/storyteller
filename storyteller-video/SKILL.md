@@ -62,8 +62,10 @@ npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
 ffmpeg -y -i renders/raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k ../teaser.mp4
 ```
 
-Full captions burn the narration into the bottom band, which no scene uses; `--captions keywords` shows only the
-2-5 word labels. Keep full captions for any video that may play on mute: keyword-only captions lose much of the argument. The band takes each beat's ground. Scene types, fields, transitions and the layout rules: `references/scenes.md`. GSAP loads from a CDN
+Full captions overlay the narration on the bottom of each scene, over a soft fade in that beat's ground: the
+ground runs to the frame edge and moves with its transition, and scene content stays above y 876.
+`--captions keywords` shows only the 2-5 word labels. Keep full captions for any video that may play on mute:
+keyword-only captions lose much of the argument. Scene types, fields, transitions and the layout rules: `references/scenes.md`. GSAP loads from a CDN
 at render time. A draft render (`--quality draft`) of a 30 s cut takes about 20 s; use it for checks.
 
 ## Length

@@ -112,7 +112,7 @@ One look sets the faces and the colour roles; the ground under each beat may cha
 whole length reads as one long slide.
 - **Grounds**: `direction.json` `"grounds": {"<name>": {bg, ink, mute, surface?, line?, em?, pattern?}}`, and each
   beat names one in `scene.ground` (none = the look's own). Plan 3-4 per video: the look's ground, its light or dark
-  opposite, a full-bleed field in one role colour (the role then means "this beat is about <role>"), and a pattern
+  opposite, a full-bleed field in one role colour (the role then means "this beat is about <role>"; use a lighter or darker shade of the role, not its exact hex, so a thin mark in that role on the next beat does not read as a leftover of the field), and a pattern
   (`dots`, `grid`, `stripes`). Change ground per act, or to mark a turn in the argument; never 3 beats in a row on one.
   `build.py` fails a ground whose ink or mute is under 4.5:1 on its bg.
 - **Type beats** (`scene.type_beat: true`, at least 2): the words are the picture. One to three words fill the frame
