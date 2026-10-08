@@ -29,7 +29,7 @@ and the route into the report.
 1. `python3 scripts/jargon_check.py beats.json terms.txt`: seed `terms.txt` with the report's glossary and its private
    meanings (claim, memo, pots). It must PASS: no sentence with 2+ new names, 5 names at most, every sentence 20 words
    or fewer. Install `wordfreq` first (`pip install wordfreq`): without it only acronyms and `terms.txt` words are
-   flagged, and a trial passed with 3 names that wordfreq counted as 6.
+   flagged.
 2. A cold read: a fresh subagent gets only the captions and must say what each name is from the text alone, or "NOT
    DEFINED". Fix every NOT DEFINED, then voice.
 

@@ -10,8 +10,7 @@ fetched once into `<teaser>/media/`, and inlined or copied at build time. The re
 - Abstract nouns (budget, latency, trust) get no asset. Keep the card scene for them.
 - Icons fit concrete nouns. A photo fits when the real thing matters (the equipment, the damage, the place).
 - Look at every photo before it ships. The pick ranks by keyword overlap, and that signal is weak.
-  "asphalt road repair" gave a road with potholes; "road repair crew paving" gave a crew at work.
-  Name the subject and the action in the query.
+  Name the subject and the action in the query ("road repair crew paving", not "asphalt road repair").
 - Refuse a photo with a readable brand, an advert, a recognisable face or a watermark.
 
 ## media.json
@@ -41,7 +40,7 @@ A failed asset prints its id and the reason, and writes no file.
 - Accept: CC0, Public Domain Mark, CC BY, MIT, ISC, Apache-2.0.
 - Reject: any NC, ND or SA licence, and any unknown licence. `credits.json` lists rejected candidates.
 - The gate runs twice: at fetch time, and again in `collect_media` before a build. A changed file also stops the build.
-- Do not add a source whose terms bar scripted access (unDraw, Storyset, Noun Project). See the research note.
+- Do not add a source whose terms bar scripted access (unDraw, Storyset, Noun Project).
 
 ## Credit duties
 

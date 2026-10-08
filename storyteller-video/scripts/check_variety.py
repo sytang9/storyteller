@@ -19,7 +19,7 @@ from collections import Counter
 
 RUN_MAX = 2  # neighbours of one type
 SHARE_MAX = 0.25
-SPREAD_MIN = 2.0  # a trial teaser measured 1.6 (7.1-11.6 s) and read as one even tempo
+SPREAD_MIN = 2.0  # longest/shortest beat; below this the video reads as one even tempo
 HELD_MIN = 1.2  # s of silence after the voice
 WORDS_PER_S = 2.4  # Kokoro at speed 0.8-0.9, for beats without a measured length
 HOLD_DEFAULT = 0.35  # build.py's default

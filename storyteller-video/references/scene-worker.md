@@ -67,10 +67,8 @@ Return one line: the status.json path.
 
 ## The fix prompt (a fresh fixer per flagged scene, with that scene's critic items)
 
-A critic watched the assembled film and scored it 5/10 pro, 6/10 clarity. The system (one road world, colour roles,
-colour-field cut, km axis) is good; execution reads beginner: beats open on empty frames, seams overlap, number
-rolls glitch. The single change it asked for: build each beat's set so every incoming transition lands on a
-composed frame (road, actors, heading, empty slots in place from frame 1); only the change animates on its word.
+A critic flagged your scene. Build each beat's set so every incoming transition lands on a composed frame (the
+shared world, actors and heading in place from frame 1; a slot appears with what fills it, never empty); only the change animates on its word.
 
 Read <skill>/references/motion-craft.md section 1 ("Set, then change") and the checklist (section 9), your brief
 <teaser>/briefs/<id>.json, <teaser>/direction.md, and your current module <teaser>/<id>.js. Your critic items are below.

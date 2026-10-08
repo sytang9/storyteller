@@ -1,7 +1,6 @@
 # Direction: one look, one grammar, one metaphor per beat
 
-Videos made with no direction step drift to the model's default look: one palette, one card grid, one even tempo,
-the same cut every time. The direction step fixes the choices once, after the script is locked and before any scene
+The direction step fixes the choices once, after the script is locked and before any scene
 exists. Write two files in the teaser folder:
 
 - `direction.md` (60 lines at most): the page every scene worker and the critic read.
@@ -48,7 +47,7 @@ Over a `ui` screenshot the theme does not apply; the still keeps its own colours
 - Emphasis is a block, not a colour: `statement` em (default `style: "block"`) wipes a block in the look's `--em`
   colour (default ink) behind the word and turns the word to the ground colour. It stands out on dark and light
   looks and borrows no role colour. A custom scene that emphasises a word does the same. A thin underline or a
-  colour change alone reads as faint (a viewer missed "Rarely." in white with an underline).
+  colour change alone reads as faint.
 - Figures: if the display face's digits are hard to read (a flagged "1" reads as "i"), set `"num"` in the look
   (`night` uses Inter). The display face then takes its digits from it everywhere, with no scene code. Numbers in
   custom scenes use the `t-num` or `t-display` class, never a hard-coded font.

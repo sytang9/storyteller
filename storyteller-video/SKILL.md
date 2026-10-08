@@ -16,8 +16,7 @@ Kokoro-82M voice (Apache-2.0), Playwright stills, HyperFrames (Apache-2.0) with 
 2. Name the 2-4 scenes you would show and offer two levels with their costs (the render itself is about 1 min):
    - **Template scenes**: 5-12M tokens processed, 15-30 min. Clear, but it looks like a template.
    - **Bespoke scenes** (a custom scene per beat, one designer subagent each, a critic and one fix round): about
-     55-60M tokens processed and 60-70 min (measured 2026-10-07 on a 12-beat cut: script and briefs 8.9M, ten
-     designers 28.2M, critic 1.3M, eight fixers 16.9M). This is the level that looks made by a motion designer.
+     55-60M tokens processed and 60-70 min. This is the level that looks made by a motion designer.
 3. Build only on a yes, at the level the user picks.
 
 ## Who does what
@@ -72,12 +71,12 @@ at render time. A draft render (`--quality draft`) of a 30 s cut takes about 20 
 About 60-110 s. A video that runs long because each beat explains one idea is fine; one that runs long because beats
 carry two ideas is not: split them.
 
-## Rules learned the hard way
+## Rules
 
 - Fix the data and the script before you compose: a fix round on a composed video re-reads a large context and
   can cost more than the first build.
 - Measure boxes on the settled page; click by accessible name (a button's aria-label can differ from its text).
 - A block wider than 65% of the screen is framed around its text, at about 1.15x the text width.
 - One zoom per `ui` beat, landing 0.3 s before the anchor word, held to the end of the beat.
-- An even tempo reads as monotone: a trial cut ran 12 beats of 7-12 s with one cut type, and the viewer
-  said every scene felt the same. `check_variety.py` now fails that sheet.
+- An even tempo reads as monotone: `check_variety.py` fails a sheet whose longest beat is under 2x the shortest,
+  or whose cuts use one transition kind.
