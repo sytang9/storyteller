@@ -1,6 +1,6 @@
 # Interactive widgets
 
-A click must pay off: about 15% of readers press even a prominent button, so the visible default always states the finding.
+Most readers never click, so the visible default always states the finding.
 
 | Reader needs to ... | Use | Not |
 |---|---|---|

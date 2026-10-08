@@ -1,6 +1,6 @@
 ---
 name: storyteller-video
-description: Builds a 60-110 s narrated explainer or teaser video for a finished storyteller report (or any brief) with a local Kokoro voice and a HyperFrames render, then embeds it in the report. Script first, then an art-direction pass (a look, a transition grammar, a metaphor per beat), scenes from a data-driven template, and a frame critic. Use when the user asks for a video, teaser, narrated explainer or animated walkthrough of a report, or says yes when the storyteller skill offers one. Not for the report page itself, live demos, or talking-head video. Token-heavy; build only on an explicit yes.
+description: Builds a 60-110 s narrated explainer or teaser video for a finished storyteller report or brief, with a local Kokoro voice and a HyperFrames render, then embeds it in the report. Use when the user asks for a video, teaser or narrated walkthrough of a report, or says yes when storyteller offers one. Token-heavy; build only on an explicit yes.
 ---
 
 # Storyteller video
