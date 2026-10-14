@@ -61,8 +61,10 @@ at least one wide view and one close view.
 - **World state between beats**: changes to world objects persist. Each brief states `world_in` and `world_out`
   (for example "W empty" -> "W holds three pairs"). A scene sets its `world_in` with `tl.set` at `b.worldAt` (its
   start, or 0.6 s earlier after a beat off the world, when the set shows under the outgoing scene) and leaves the world in its `world_out` by its end.
-- **Shared values**: numbers that several beats show (a matrix's cells, a score, a count) live once in
-  `WORLD.data`, set by the world builder. Beats read them; they never invent their own, or the set jumps at a cut.
+- **Shared values**: the worked example that several beats show (the example sentence, a matrix's numbers, a
+  score) lives once in `WORLD.data`, set by the world builder. Beats read it; they never invent their own, or
+  the set jumps at a cut or a word changes. Keep the numbers on screen where the story computes: a blind A/B
+  scored a world cut 6 against 8 on sound-off clarity when its update step lost the digits the old cut showed.
 - **Grounds on the world**: a world beat may name its own `ground`; the set changes colour across the cut. The
   variety check counts a world beat by its ground and state, not its view: three views of the set on one ground
   read as one picture. Rotate grounds or states along the route, and mix in beats off the world (type beats,
