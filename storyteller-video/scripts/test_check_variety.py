@@ -6,8 +6,11 @@ def beat(i, kind="motion", type_="chips", words=20, **kw):
     return {"id": f"b{i:02d}", "kind": kind, "text": " ".join(["word"] * words), "scene": {"type": type_}, **kw}
 
 
+DIRECTION = {"look": "night", "transition": "fade", "grounds": {"cream": {}, "field": {}}, "protagonist": "one token"}
+
+
 def rules(beats, direction=None):
-    return {rule: ok for rule, ok, _ in check(beats, direction or {"look": "night", "transition": "fade"})}
+    return {rule: ok for rule, ok, _ in check(beats, direction or DIRECTION)}
 
 
 def varied():
@@ -15,7 +18,25 @@ def varied():
     bs = [beat(i, "ui" if t == "ui" else "motion", t, words=8 + 4 * (i % 4)) for i, t in enumerate(types)]
     bs[3]["hold"] = 1.6
     bs[5]["in"] = "zoom"
+    for i, b in enumerate(bs):
+        b["scene"]["ground"] = ["cream", None, "field"][i % 3]
+        b["scene"]["shot"] = ["wide", "mid", "close"][i % 3]
+        b["scene"]["protagonist"] = i % 2 == 0
+    bs[0]["scene"]["type_beat"] = bs[4]["scene"]["type_beat"] = True
     return bs
+
+
+def world_beats(states=(None, None, None)):
+    bs = varied()
+    for b, view, state in zip(bs[1:4], ["wide", "close", "mid"], states):
+        b["scene"].pop("ground")
+        b["scene"]["world"] = {"view": view, "shot": "wide", **({"state": state} if state else {})}
+    return bs
+
+
+def test_world_beats_count_by_ground_not_view():
+    assert not rules(world_beats())["grounds"]  # three views of the set on one ground read as one picture
+    assert rules(world_beats((None, "before", None)))["grounds"]  # a state filter changes the colour
 
 
 def test_varied_sheet_passes():

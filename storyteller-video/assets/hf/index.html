@@ -152,6 +152,46 @@
       if (!IS_FULL) document.getElementById("band").style.display = "none";
       const bodies = [];
       const roots = [];
+      // ================= the world (direction.json "world" + world.js) =================
+      // one shared set under the scenes, built once by world.js. A beat with scene.world shows it from a named view
+      // (world.js views) and in a named state (direction.json world states). A 2D world is moved by the transform
+      // below; a 3D world draws itself in WORLD_MOD.render(t, WORLD_CAM). Both read WORLD_CAM, which only tweens on tl.
+      const worldLayer = el("div", "abs world-layer", stage, { width: "1920px", height: FRAME_H + "px", opacity: 0, overflow: "hidden", background: "var(--bg)" });
+      stage.insertBefore(worldLayer, stage.firstChild);
+      const worldInner = el("div", "abs world-inner", worldLayer, { width: "1920px", height: FRAME_H + "px", transformOrigin: "0 0" });
+      const WORLD_CAM = { x: 960, y: 540, zoom: 1 };
+      const WORLD_MOD = D.world ? window.WORLD : null;
+      const WORLD_CUE = 0.6; // s before a beat's cut: the world is in place (and visible) under the outgoing scene
+      const applyWorld = () => {
+        if (!WORLD_MOD) return;
+        if (WORLD_MOD.render) WORLD_MOD.render(tl.time(), WORLD_CAM);
+        else worldInner.style.transform = `translate(960px, 540px) scale(${WORLD_CAM.zoom}) translate(${-WORLD_CAM.x}px, ${-WORLD_CAM.y}px)`;
+      };
+      const scheduleWorld = () => {
+        if (!WORLD_MOD) return;
+        D.beats.forEach((b, i) => {
+          if (!b.world) return;
+          const prev = D.beats[i - 1], next = D.beats[i + 1];
+          const view = WORLD_MOD.views && WORLD_MOD.views[b.world.view];
+          if (!view) throw new Error(`beat ${b.id}: world view "${b.world.view}" not in world.js views`);
+          const onWorld = prev && prev.world;
+          // a world beat after another one moves the camera across the cut; the first one starts at its view
+          if (onWorld) tl.to(WORLD_CAM, { ...view, duration: Math.min(1.4, b.dur * 0.4), ease: MOVE }, b.start);
+          else tl.set(WORLD_CAM, { ...view }, b.worldAt);
+          const state = (D.world.states || {})[b.world.state] || {};
+          tl.set(worldLayer, { filter: state.filter || "none" }, b.worldAt);
+          // the beat's ground: the set's background and every var(--token) inside it (world.js draws with them)
+          const g = { ...BASE_C, ...(b.ground ? b.ground.vars : {}) };
+          const vars = Object.fromEntries(Object.entries(g).filter(([k]) => k !== "onAccent").map(([k, v]) => ["--" + k, v]));
+          if (onWorld) tl.to(worldLayer, { ...vars, duration: 0.6, ease: "power1.inOut" }, b.start - 0.3);
+          else tl.set(worldLayer, vars, b.worldAt);
+          if (WORLD_MOD.state && b.world.state) WORLD_MOD.state(b.world.state, b.start, b);
+          if (!onWorld) tl.set(worldLayer, { opacity: 1 }, b.worldAt);
+          if (!next || !next.world) tl.set(worldLayer, { opacity: 0 }, next ? next.start + WORLD_CUE : (D.end ? D.end.start + WORLD_CUE : D.total));
+        });
+        tl.eventCallback("onUpdate", applyWorld); // a seek renders the world for that exact time
+        applyWorld();
+      };
       // every fromTo below names each prop in both states: a prop named only in `from` is lost when a seek jumps
       // over the whole tween after an earlier seek reverted it (GSAP renders `from`-only props at the start alone)
       // the transition into a beat (beat.in, default from direction.json). The grammar lives in direction.md:
@@ -194,9 +234,14 @@
       // the whole build waits for the fonts: every measurement below (fit, wrapped words, arrows, labels) needs the
       // real glyph widths. HyperFrames allows an async build; the timeline is registered only when it is complete.
       loadFonts().then(() => {
+        if (WORLD_MOD) WORLD_MOD.build(worldInner, { CAM: WORLD_CAM, layer: worldLayer }); // once, before any scene that uses its objects
+        // b.worldAt: when this beat's world is on screen. After a beat off the world it shows WORLD_CUE early, under
+        // the outgoing scene, so a module sets its world_in at b.worldAt, not b.start
+        D.beats.forEach((b, i) => { if (b.world) b.worldAt = i && D.beats[i - 1].world ? b.start : Math.max(0, b.start - WORLD_CUE); });
         D.beats.forEach((b, i) => {
           const next = D.beats[i + 1];
           const root = el("div", "abs scene", stage, { height: FRAME_H + "px" });
+          if (b.world) Object.assign(root.style, { background: "transparent", backgroundImage: "none" }); // the world shows through
           // the beat's ground (direction.json "grounds"): its colour tokens apply to everything inside this scene
           if (b.ground) {
             Object.entries(b.ground.vars).forEach(([k, v]) => root.style.setProperty("--" + k, v));
@@ -283,6 +328,7 @@
         const morphLayer = el("div", "abs", document.getElementById("root"), { left: 0, top: 0, width: "1920px", height: "1080px" });
         buildMorphs(morphLayer); // motion.js: measures both ends of each match cut in frame px, after the fit
         checkArrows(); // motion.js: console error when an arrow tip lands off its target
+        scheduleWorld();
         window.__timelines["main"] = tl;
       });
     </script>

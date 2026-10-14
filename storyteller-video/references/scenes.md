@@ -21,6 +21,9 @@ The template in `assets/hf/` is a HyperFrames composition that renders a narrate
 - `hold` (optional): seconds of silence after this beat's voice (default `direction.json` `hold`, else 0.35). A held beat (1.2-2.5 s) lets a key picture land.
 - `in` (optional): the transition into this beat: `calm`, `fade`, `cut`, `push`, `zoom`, `wipe` or `morph` (default `direction.json` `transition`). See the grammar in `references/direction.md`. `morph` also needs `scene.morph` (see Transitions below).
 - `scene`: `{type, ...fields}`, as described below. Every `word` field is a caption word, matched case-insensitively with punctuation removed (apostrophes stay: `Acme's` is its own word). A word pair `[w, n]` picks the nth match. A visual change lands 0.3 s before its word. A missing word stops the build with an error.
+- `scene.world` (optional): `{view, shot, state?}`: the beat stands in the shared world (`references/world.md`); its
+  root is transparent and its module animates world objects (`WORLD.objects`). `scene.shot` (`wide`, `mid`,
+  `close`) tags a beat off the world; `scene.protagonist: true` marks a beat that shows the protagonist.
 - `scene.ground` (optional): a ground name from `direction.json` `grounds`; its bg, ink and mute replace the look's
   for this beat only. `scene.type_beat: true` marks a beat whose words are the picture (`check_variety.py` counts them).
 - Colours are role keys (`accent`, `blue`, `teal`, `purple`, `orange`, `good`, `ink`, `mute`); the look sets their values. Use a literal CSS colour only for a real-world colour (a road's asphalt).

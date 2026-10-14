@@ -15,7 +15,8 @@ Kokoro-82M voice (Apache-2.0), Playwright stills, HyperFrames (Apache-2.0) with 
    a before/after), or a real app the reader must picture. Never for a short or simple report.
 2. Name the 2-4 scenes you would show and offer two levels with their costs (the render itself is about 1 min):
    - **Template scenes**: 5-12M tokens processed, 15-30 min. Clear, but it looks like a template.
-   - **Bespoke scenes** (a custom scene per beat, one designer subagent each, a critic and one fix round): about
+   - **Bespoke scenes** (a shared world built first, a custom scene per beat, one designer subagent each, a critic
+     and one fix round): about
      55-60M tokens processed and 60-70 min. This is the level that looks made by a motion designer.
 3. Build only on a yes, at the level the user picks.
 
@@ -27,19 +28,20 @@ after them. Fresh subagents do the work that needs a clean context, and hand off
 | Step | Who | Output |
 | --- | --- | --- |
 | 1. Script | main thread | `beats.json` (`references/script.md`); gates: `jargon_check.py`, then a cold-read subagent |
-| 2. Direction | main thread | `direction.md` + `direction.json` with 3-4 grounds, 2 type beats and a break (`references/direction.md`); gate: `check_variety.py` |
+| 2. Direction | main thread | `direction.md` + `direction.json` with 3-4 grounds, 2 type beats, a break, a world, one protagonist and shot distances (`references/direction.md`, `references/world.md`); gate: `check_variety.py` |
 | 3. Voice | main thread | `voice/*.wav`, `beats.timed.json` (`scripts/tts_beats.py`) |
 | 3b. Events | main thread | `scene.events` on each beat, so no beat sits still for 3 s (`references/scenes.md`, Events); re-run `check_variety.py` on `beats.timed.json` |
 | 4. Screens | main thread | `shots/` from `scripts/record_tour.cjs` (`ui` beats only, below) |
 | 4b. Media | main thread | `media.json` from the metaphor table, then `scripts/fetch_assets.py`: open-licence icons, and a photo only where the real object is the point (`references/media.md`); look at every photo |
-| 5. Bespoke scenes | briefs by the main thread, then one subagent per scene, in parallel, each in its own sandbox (`references/scene-worker.md`, `scripts/scene_sandbox.py`) | `<id>.js` custom module + its frames; packet: the beat, its word times, `direction.md`, `references/motion-craft.md` (the pro motion rules and `assets/hf/examples/craft-example.js`), `references/scenes.md`, the media ids |
+| 4c. World | one subagent, before the scene designers (`references/world.md`) | `world.js` (2D, or 3D with Three.js), one frame per view, and the list of views and object ids |
+| 5. Bespoke scenes | briefs by the main thread, then one subagent per scene, in parallel, each in its own sandbox (`references/scene-worker.md`, `scripts/scene_sandbox.py`) | `<id>.js` custom module + its frames; packet: the beat, its word times, `direction.md`, `references/motion-craft.md` (the pro motion rules and `assets/hf/examples/craft-example.js`), `references/scenes.md`, the media ids, the world's views and object ids (animate them; never redraw the set) |
 | 6. Compose and render | main thread | `teaser.mp4`, `teaser.vtt`, `poster.jpg`; gate: `scripts/frame_scan.py` (no strobe, no empty frames) |
 | 7. Critic | fresh subagent, frames only; then a fresh fixer per flagged scene (`references/scene-worker.md`) | `qc/sheet.png` from `scripts/qc_sheet.py`, then `qc/critic.json`; fix the 3 worst, two rounds at most (`references/critic.md`) |
 | 8. Embed | main thread | the report rebuilt with the video in it (`references/critic.md`) |
 
 Do not add roles beyond these: script, direction and scene design depend on each other, and agents that split them
-make conflicting choices. Do not use Blender, Remotion or a paid API; the template covers 3D (`layers`) and the
-HyperFrames catalog covers the rest.
+make conflicting choices. Do not use Blender, Remotion or a paid API: a Three.js world (`references/world.md`) covers
+3D, the template covers layered depth (`layers`), and the HyperFrames catalog covers the rest.
 
 ## Screens (`ui` beats)
 

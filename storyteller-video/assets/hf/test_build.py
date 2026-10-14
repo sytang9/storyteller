@@ -84,7 +84,7 @@ def test_every_look_keeps_text_readable(name):
 def test_direction_writes_theme_and_rejects_unknown_values(tmp_path):
     d = tmp_path / "direction.json"
     d.write_text(json.dumps({"look": "night", "override": {"accent": "#ff8800"}, "transition": "push", "hold": 0.5}))
-    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5, "end": None, "grounds": {}}
+    assert load_direction(d, tmp_path) == {"look": "night", "in": "push", "hold": 0.5, "end": None, "grounds": {}, "world": None}
     theme = (tmp_path / "theme.css").read_text()
     assert "--accent: #ff8800;" in theme and '--display-base: "Space Grotesk Video"' in theme
     for bad in ({"look": "neon"}, {"look": "_doc"}, {"look": "paper", "transition": "spin"}, {"look": "paper", "end": {"sub": "x"}}):
@@ -161,5 +161,46 @@ def test_grounds_may_retune_role_colours_but_keep_them_visible(tmp_path):
     d.write_text(json.dumps({"look": "night", "grounds": ok}))
     assert load_direction(d, tmp_path)["grounds"]["cream"]["teal"] == "#0b7a70"
     d.write_text(json.dumps({"look": "night", "grounds": {"cream": {**ok["cream"], "teal": "#89f0e5"}}}))  # pale teal on cream
+    with pytest.raises(SystemExit):
+        load_direction(d, tmp_path)
+
+
+from build import beat_world
+
+
+def test_world_config_loads_and_validates(tmp_path):
+    (tmp_path / "world.js").write_text("window.WORLD = {build() {}, views: {wide: {x: 0, y: 0, zoom: 1}}};")
+    d = tmp_path / "direction.json"
+    world = {"file": "world.js", "three": True, "states": {"before": {"filter": "grayscale(1) brightness(0.92)"}, "after": {}}}
+    d.write_text(json.dumps({"look": "paper", "world": world}))
+    look = load_direction(d, tmp_path)
+    assert look["world"]["file"] == "world.js" and look["world"]["three"] is True
+    assert set(look["world"]["states"]) == {"before", "after"}
+    for bad in ({"file": "../x.js"}, {"file": "world.js", "states": {"s": {"filter": "url(evil)"}}},
+                {"file": "world.js", "states": {"Bad Name": {}}}, {"file": "world.js", "three": "yes"}):
+        d.write_text(json.dumps({"look": "paper", "world": bad}))
+        with pytest.raises(SystemExit):
+            load_direction(d, tmp_path)
+
+
+def test_beat_world_needs_a_view_a_known_state_and_a_shot():
+    world = {"file": "world.js", "three": False, "states": {"before": {"filter": "grayscale(1)"}}}
+    assert beat_world({"world": {"view": "wide", "shot": "wide", "state": "before"}}, world, "b1") == {"view": "wide", "shot": "wide", "state": "before"}
+    assert beat_world({}, world, "b1") is None
+    for bad in ({"world": {"shot": "wide"}}, {"world": {"view": "wide", "shot": "huge"}},
+                {"world": {"view": "wide", "shot": "close", "state": "neon"}}):
+        with pytest.raises(SystemExit):
+            beat_world(bad, world, "b1")
+    with pytest.raises(SystemExit):  # a beat on the world needs direction.json to name one
+        beat_world({"world": {"view": "wide", "shot": "wide"}}, None, "b1")
+
+
+def test_world_ground_must_be_a_named_ground(tmp_path):
+    (tmp_path / "world.js").write_text("window.WORLD = {};")
+    d = tmp_path / "direction.json"
+    grounds = {"day": {"bg": "#f2ede4", "ink": "#10141c", "mute": "#4a525e"}}
+    d.write_text(json.dumps({"look": "night", "grounds": grounds, "world": {"file": "world.js", "ground": "day"}}))
+    assert load_direction(d, tmp_path)["world"]["ground"] == "day"
+    d.write_text(json.dumps({"look": "night", "grounds": grounds, "world": {"file": "world.js", "ground": "noon"}}))
     with pytest.raises(SystemExit):
         load_direction(d, tmp_path)

@@ -112,6 +112,10 @@ ROLE_KEYS = {"accent", "blue", "teal", "purple", "orange", "good"}
 GROUND_KEYS = {"bg", "ink", "mute", "surface", "line", "em"} | ROLE_KEYS  # colour tokens a ground may set for its beats
 PATTERNS = {"dots", "grid", "stripes"}  # index.html draws them in the ground's line colour
 BREAK_DUR = (0.5, 3.0)  # a silent chapter break, s
+SHOTS = {"wide", "mid", "close"}  # camera distance of a beat on the world (check_variety.py counts them)
+JS_NAME = re.compile(r"[A-Za-z0-9_-]+\.js")
+FILTER = re.compile(r"none|((grayscale|brightness|contrast|saturate|sepia|blur)\(\d+(\.\d+)?(%|px)?\)\s*)+")
+THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"  # a global THREE, for a 3D world
 
 
 def check_tokens(tokens):
@@ -183,6 +187,44 @@ def break_beat(b):
     return float(dur)
 
 
+def check_world(world, base, grounds=None):
+    """direction.json "world": {file, three?, states?}: the one shared set every world beat stands in.
+    file is a plain .js next to direction.json; states map a name to a CSS filter applied to the world."""
+    if not world:
+        return None
+    name = world.get("file", "")
+    if not JS_NAME.fullmatch(name) or not (base / name).is_file():
+        raise SystemExit(f"world file must be a plain <file>.js next to direction.json, got {name!r}")
+    if not isinstance(world.get("three", False), bool):
+        raise SystemExit("world three must be true or false")
+    for k, v in world.get("states", {}).items():
+        if not SAFE_ID.fullmatch(k):
+            raise SystemExit(f"world state {k!r}: use lowercase letters, digits, - and _")
+        if not FILTER.fullmatch(str(v.get("filter", "none")).strip()):
+            raise SystemExit(f"world state {k!r}: filter {v.get('filter')!r} must be none or grayscale/brightness/contrast/saturate/sepia/blur(n)")
+    ground = world.get("ground")
+    if ground and ground not in (grounds or {}):
+        raise SystemExit(f"world ground {ground!r} not in direction.json grounds")
+    return {"file": name, "three": world.get("three", False), "states": world.get("states", {}), "ground": ground,
+            "src": str((base / name).resolve())}
+
+
+def beat_world(scene, world, beat_id):
+    """A beat on the world: {view, shot, state?}; None when the beat stands on its own ground."""
+    w = scene.get("world")
+    if not w:
+        return None
+    if not world:
+        raise SystemExit(f"beat {beat_id}: scene.world needs direction.json world")
+    if not w.get("view"):
+        raise SystemExit(f"beat {beat_id}: scene.world needs a view (a name from world.js views)")
+    if w.get("shot") not in SHOTS:
+        raise SystemExit(f"beat {beat_id}: scene.world shot {w.get('shot')!r} not in {sorted(SHOTS)}")
+    if w.get("state") and w["state"] not in world["states"]:
+        raise SystemExit(f"beat {beat_id}: world state {w['state']!r} not in direction.json world states")
+    return {k: w[k] for k in ("view", "shot", "state") if k in w}
+
+
 def safe_id(i):
     if not SAFE_ID.fullmatch(str(i)):
         raise SystemExit(f"beat id {i!r}: use lowercase letters, digits, - and _ (it becomes a file name)")
@@ -220,7 +262,8 @@ def load_direction(path, out=HERE):
         raise SystemExit("direction.json end needs a title (the report's name), and may take sub and dur")
     grounds = direction.get("grounds", {})
     check_grounds(grounds)
-    return {"look": look, "in": default_in, "hold": float(direction.get("hold", HOLD)), "end": end, "grounds": grounds}
+    world = check_world(direction.get("world"), path.parent if path else HERE, grounds)
+    return {"look": look, "in": default_in, "hold": float(direction.get("hold", HOLD)), "end": end, "grounds": grounds, "world": world}
 
 
 DIGITS = "U+0030-0039, U+0025"  # 0-9 and %
@@ -287,7 +330,9 @@ def main():
             "id": safe_id(b["id"]), "kind": b["kind"], "scene": scene, "caption": b["caption"],
             "start": round(t, 3), "vstart": round(vstart, 3), "dur": b["dur"],
             "end": round(t + b["dur"] + hold, 3), "in": kind_in, "words": words,
-            "ground": beat_ground(scene, look["grounds"], b["id"]),
+            # a beat on the world stands on the world's ground (its captions and text match the set) unless it names one
+            "ground": beat_ground(scene if scene.get("ground") or not scene.get("world") else {**scene, "ground": (look["world"] or {}).get("ground")}, look["grounds"], b["id"]),
+            "world": beat_world(scene, look["world"], b["id"]),
         }
         check_words(b, beat["scene"], words)
         if beat["scene"]["type"] == "custom":
@@ -335,7 +380,8 @@ def main():
         raise SystemExit('media under CC BY needs a visible credit: add "end" to direction.json (the end card lists it)')
     if end:
         end["credits"] = owed
-    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "captions": args.captions, "beats": out, "end": end, "media": media}
+    world = {"three": look["world"]["three"], "states": look["world"]["states"]} if look["world"] else None
+    data = {"width": 1920, "height": 1080, "fps": 30, "total": total, "captions": args.captions, "beats": out, "end": end, "media": media, "world": world}
     (HERE / "data.js").write_text("// generated by build.py; do not edit\nwindow.TEASER = " + json.dumps(data, indent=1) + ";\n")
 
     audio = "\n".join(
@@ -346,7 +392,11 @@ def main():
     html = (HERE / "index.html").read_text()
     html = re.sub(r'(data-composition-id="main"[^>]*?data-duration=")[^"]*"', rf'\g<1>{total}"', html, count=1, flags=re.S)
     html = re.sub(r"(<!-- AUDIO:START -->\n).*?(\s*<!-- AUDIO:END -->)", lambda m: m.group(1) + audio + "\n      <!-- AUDIO:END -->", html, flags=re.S)
-    scripts = "\n".join(f'    <script src="{m}"></script>' for m in modules)
+    pre = []  # the world (and Three.js for a 3D one) loads before the scene modules that use it
+    if look["world"]:
+        shutil.copy2(look["world"]["src"], HERE / look["world"]["file"])
+        pre = ([THREE_SRC] if look["world"]["three"] else []) + [look["world"]["file"]]
+    scripts = "\n".join(f'    <script src="{m}"></script>' for m in pre + modules)
     html = re.sub(r"(<!-- CUSTOM:START -->\n).*?(\s*<!-- CUSTOM:END -->)", lambda m: m.group(1) + scripts + "\n    <!-- CUSTOM:END -->", html, flags=re.S)
     (HERE / "index.html").write_text(html)
 

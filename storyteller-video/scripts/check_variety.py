@@ -10,9 +10,13 @@ Each rule prints PASS or FIX; the exit code is 1 when any rule says FIX.
   cuts         at least 2 transition kinds; the most used kind is at least half of the cuts, morphs aside (one primary)
   look         direction.json names a look (the template's presets.json lists them)
   grounds      at least 3 grounds in use (the look's own counts as one; direction.json "grounds" adds the rest) and
-               no 3 neighbouring beats on one ground
+               no 3 neighbouring beats on one ground; a beat on the world counts as its ground and state, not its view
   type beats   at least 2 beats where the words are the picture (scene.type_beat: true)
   breaks       a video over 60 s has at least one silent chapter break (kind "break")
+  shots        beats tag a camera distance (scene.shot or scene.world.shot: wide, mid, close); at least one wide and one
+               close, and no 3 neighbouring tagged beats at one distance
+  protagonist  direction.json names one protagonist (the object the viewer follows) and at least half of the voiced
+               beats show it (scene.protagonist: true)
   stillness    beats.timed.json only: no 3.0 s stretch of voice with no change on screen (any word-timed field in
                the scene or its events counts; a ui beat counts its zoom and click)
 """
@@ -32,6 +36,7 @@ STILL_MAX = 3.0  # s of voice with nothing new on screen
 GROUNDS_MIN = 3
 TYPE_BEATS_MIN = 2
 BREAK_AFTER = 60.0  # s of video that calls for a chapter break
+PROTAGONIST_SHARE = 0.5
 EVENT_KINDS = {"hero", "lift", "mark", "swap", "strike", "number", "note", "push"}  # assets/hf/events.js
 CONTINUOUS = {"lanes"}  # scene types that keep moving between their cue words (the lanes token walk)
 CUE_KEYS = {"cues", "word", "until", "landWord", "show", "toWord", "ofWord", "restIn", "spread", "in", "tick", "tagIn", "detailIn", "focus", "click"}
@@ -123,9 +128,15 @@ def check(beats, direction):
 
     out.append(("look", bool(direction.get("look")), direction.get("look") or "direction.json has no look"))
 
-    grounds = [(b.get("scene") or {}).get("ground") or "look" for b in beats]
+    def ground(b):
+        sc = b.get("scene") or {}
+        w = sc.get("world")
+        base = sc.get("ground") or (w and (direction.get("world") or {}).get("ground")) or "look"
+        # a world state is a filter over the whole frame, so it is a colour change; a new view is not (rule shots)
+        return base + (":" + w["state"] if w and w.get("state") else "")
+    grounds = [ground(b) for b in beats]
     known = set(direction.get("grounds", {})) | {"look"}
-    unknown = sorted(set(grounds) - known)
+    unknown = sorted({g.split(":")[0] for g in grounds} - known)
     g_runs = [i for i in range(len(grounds) - RUN_MAX) if len(set(grounds[i : i + RUN_MAX + 1])) == 1]
     ok = len(set(grounds)) >= GROUNDS_MIN and not g_runs and not unknown
     detail = f"{len(set(grounds))} in use ({', '.join(sorted(set(grounds)))})"
@@ -142,7 +153,21 @@ def check(beats, direction):
     total = sum(lens)
     out.append(("breaks", total <= BREAK_AFTER or bool(breaks), f"{', '.join(breaks) or 'none'} in {total:.0f} s"))
 
+    def shot(b):
+        sc = b.get("scene") or {}
+        return sc.get("shot") or (sc.get("world") or {}).get("shot")
+    tagged = [(b["id"], shot(b)) for b in beats if shot(b)]
+    s_runs = [tagged[i][0] for i in range(len(tagged) - RUN_MAX) if len({t for _, t in tagged[i : i + RUN_MAX + 1]}) == 1]
+    kinds = {t for _, t in tagged}
+    ok = {"wide", "close"} <= kinds and not s_runs
+    out.append(("shots", ok, f"{len(tagged)} tagged ({', '.join(sorted(kinds)) or 'none'})" + (f"; 3 in a row from {', '.join(s_runs)}" if s_runs else "")))
+
     voiced = [b for b in beats if b.get("kind") != "break"]
+    hero = direction.get("protagonist")
+    seen = [b["id"] for b in voiced if (b.get("scene") or {}).get("protagonist")]
+    ok = bool(hero) and len(seen) >= PROTAGONIST_SHARE * len(voiced)
+    out.append(("protagonist", ok, f"{hero or 'none named'}: in {len(seen)} of {len(voiced)} voiced beats"))
+
     if all("caption_words" in b for b in voiced):
         still = [(b["id"], still_gaps(b)) for b in voiced]
         bad = [f"{i} {g:.1f} s" for i, g in still if g > STILL_MAX]

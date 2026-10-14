@@ -103,7 +103,10 @@ Name the primary and accents in `direction.md`.
 No 3 neighbouring beats with one scene type; no motion type on more than 25% of the beats; the longest beat at
 least 2x the shortest, with one held beat; 2 or more transition kinds with one primary; a look named. Run it on
 `beats.json` after this step and on `beats.timed.json` after the voice, where it also fails a beat with more than
-3.0 s of voice and no change on screen. It also needs 3 grounds, 2 type beats and, past 60 s, one break (below).
+3.0 s of voice and no change on screen. It also needs 3 grounds, 2 type beats, past 60 s one break (below), one wide and one close shot
+(`scene.shot`, or `scene.world.shot` on the world), and a protagonist: `direction.json` `"protagonist"` names the one
+thing the viewer follows, and at least half the voiced beats show it (`scene.protagonist: true`). The shared world,
+its views and its states are in `references/world.md`.
 It must PASS before any compose.
 
 ## Grounds, type beats and breaks

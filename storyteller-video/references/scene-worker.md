@@ -38,6 +38,14 @@ Read first, in this order:
    cue, wordAt, popIn, reveal, drawLine, head, keyLabel, hero/heroGroup/heroProps, iconEl, imageEl, and the eases
    ENTER, EXIT and MOVE. Read the code; do not guess signatures.
 
+If your brief has `world` (a view and the world's object ids), your beat stands in the shared set built in
+`<teaser>/world.js`: never redraw it. Animate its named objects (`WORLD.objects["<id>"]`, tweens on `tl`) and add
+only what this beat changes (labels, a highlight, a moving token). The camera move to your view is done for you,
+and so is your ground under the set (never add a full-frame background to the world layer). Set your `world_in` at
+`b.worldAt` (the template's time your world shows; after a beat off the world it is 0.6 s before `b.start`) with one `tl.set` per element: two sets on one element at one time render the first in HyperFrames, and in
+the one-beat sandbox `b.worldAt` is 0, so a "hide at 0, show at b.worldAt" pair collides. Leave shared text (digits,
+labels) in a state the next beat sets for itself.
+
 Your beat may stand on its own ground (`scene.ground` in the brief): take every colour from the CSS variables
 (`var(--bg)`, `var(--ink)`, `var(--mute)`, `var(--surface)`) and the role helpers, never from hex values copied from
 direction.md, so the ground can change under you. A `type_beat` brief makes the words the picture: frame-wide, kinetic,

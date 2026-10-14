@@ -15,7 +15,8 @@ and the route into the report.
    numbers stay off the voice ("one open question: should X sit inside Y?", not "decision 13").
 3. At most one new name or number per sentence. A label shows the plain word first and the report's term second,
    once ("bill (claim)"), so the report still reads as a second look. Few numbers, each from the ledger.
-4. One running example and one persistent object (the job, the request) from the first scene to the last.
+4. One running example and one persistent object (the job, the request, one sample) from the first scene to the
+   last: it becomes `direction.json` `"protagonist"`.
 5. A paired analogy if it maps, with one beat for where it breaks ("unlike a relay, the baton can go back").
 6. State the reader's likely doubt and answer it once with evidence (a refutation, not a feature list).
 7. The voice gives the "why"; the picture gives the detail. The voice never reads the screen aloud.

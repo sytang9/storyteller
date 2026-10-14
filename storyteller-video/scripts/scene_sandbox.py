@@ -39,6 +39,9 @@ def make(teaser, bin_dir, ids):
         (box / "shots/tour.json").write_text('{"beats": []}')
         if (teaser / "direction.json").exists():
             shutil.copy2(teaser / "direction.json", box)
+            world = (json.loads((teaser / "direction.json").read_text()).get("world") or {}).get("file")
+            if world and (teaser / world).is_file():  # the shared set; a designer animates it, never redraws it
+                shutil.copy2(teaser / world, box)
         beat = {k: v for k, v in beats[i].items() if k != "in"}
         (box / "beats.timed.json").write_text(json.dumps([beat], indent=1))
         print(f"{box}")
