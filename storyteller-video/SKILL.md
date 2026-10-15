@@ -69,7 +69,8 @@ mix (kamwoh's infrasel-video), and times it from the build: a cut ticks, a push,
 camera move whooshes softly, a type beat thuds, a break shimmers, each brief's anchor word pops, and the end card plays
 a two-note success. Music (`scripts/music.py`): the mood from `direction.json` `sound.mood` (references/direction.md,
 Music), soft to the first break and full after it; it ducks under the voice and holds the duck through pauses.
-`--moods` renders one video per mood into `music/` for a person to pick by ear. Over speech a cue sits 12 dB under the
+`--moods` renders one video per mood into `music/` for a person to pick by ear; `--bed <file>` mixes a real track instead,
+such as an ACE-Step take (`references/music-gen.md`). Over speech a cue sits 12 dB under the
 voice. `direction.json` `"sound": {"cues", "bed", "cue_gain", "bed_gain"}` turns a part off or scales it.
 Listen once on headphones before you embed.
 
