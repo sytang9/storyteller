@@ -2,7 +2,7 @@
 import numpy as np
 
 from music import MOODS, music
-from sound import POP_GAP, POP_MAX, SR, UNDER_DB, act_switch, bank, duck, fit_under, plan
+from sound import ACT_ONE, POP_GAP, POP_MAX, SR, UNDER_DB, act_shape, act_switch, bank, duck, fit_under, plan
 
 
 def words(start, text, step=0.5):
@@ -97,3 +97,9 @@ def test_a_cue_over_speech_sits_under_the_voice_and_keeps_its_level_in_a_gap():
     ratio = 20 * np.log10(np.sqrt(np.mean(voice[int(0.1 * SR) : int(0.1 * SR) + n] ** 2)) / np.sqrt(np.mean((cue * g) ** 2)))
     assert abs(ratio - UNDER_DB) < 0.1
     assert fit_under(voice, 0.8, cue) == 1.0
+
+
+def test_a_file_bed_is_soft_in_act_one_and_full_after_the_break():
+    g = act_shape(10 * SR, 4.0)
+    assert abs(g[0] - ACT_ONE) < 1e-6 and abs(g[int(3.9 * SR)] - ACT_ONE) < 1e-6 and g[int(6.5 * SR)] == 1
+    assert np.all(act_shape(SR, 0.0) == 1)

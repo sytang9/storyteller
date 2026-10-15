@@ -1,6 +1,6 @@
 """Sound cues and music under the voice, synthesised with numpy: no sample files, no licences, no API.
 
-    python3 sound.py <teaser dir> [--moods]   (ffmpeg on PATH; reads hf/data.js, hf/renders/raw.mp4, briefs/*.json)
+    python3 sound.py <teaser dir> [--moods | --bed <file> [--out <mp4>]]   (ffmpeg on PATH; reads hf/data.js, hf/renders/raw.mp4, briefs/*.json)
 
 Writes <teaser>/soundtrack.wav and <teaser>/teaser.mp4 (video copied, audio = voice + cues + music, loudnorm).
 The sounds and the music follow kamwoh's infrasel-video mix.py (the team's reference cut); the timing comes from
@@ -13,7 +13,8 @@ in full in act two. It ducks under the voice and holds the duck through short pa
 Over speech a cue sits at least UNDER_DB under the voice around it, so it never masks a word.
 direction.json "sound": {"cues": true, "bed": true, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0}
 turns parts off, scales them, and picks the music. --moods writes music/<mood>.mp4 for every mood, for a person to
-pick by ear: python3 sound.py <teaser dir> --moods
+pick by ear: python3 sound.py <teaser dir> --moods. "bed_file" (or --bed <file> [--out <mp4>]) uses a music file instead,
+such as an ACE-Step track (references/music-gen.md).
 """
 import json
 import pathlib
@@ -33,6 +34,8 @@ SWEEP = {"push", "wipe", "zoom", "morph"}
 VOICE_PEAK = 0.9
 MUSIC_LEVEL = 0.30  # music peak against the voice peak, before the duck
 FX_LEVEL = 0.8
+BED_RMS_DB = -18.7  # a file bed is scaled to this RMS, the level of music.py's beds (a mastered track is denser)
+ACT_ONE = 0.45  # a file bed plays at this share before the first break, then ramps to full over 2 s
 UNDER_DB = 12.0  # a cue over speech sits at least this far under the voice around it
 DUCK = 0.55  # the music drops by this share while the voice speaks
 DUCK_HOLD = 0.6  # s: the duck holds through pauses shorter than this
@@ -188,6 +191,26 @@ def duck(voice):
     return np.interp(np.arange(len(voice)), np.arange(len(eased)) * hop, 1 - DUCK * eased).astype(np.float32)
 
 
+def file_bed(path, n):
+    """A music file (any format ffmpeg reads) as the bed: mono, SR, BED_RMS_DB, cut or padded to n, 3 s fade out."""
+    tmp = pathlib.Path(path).with_suffix(".bed.wav")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(path), "-ac", "1", "-ar", str(SR), str(tmp)], check=True)
+    x = read_wav(tmp)
+    tmp.unlink()
+    x = np.pad(x, (0, max(0, n - len(x))))[:n]
+    fo = min(n, 3 * SR)
+    x[n - fo :] *= np.linspace(1, 0, fo)
+    return x * 10 ** (BED_RMS_DB / 20) / (np.sqrt(np.mean(x**2)) + 1e-9)
+
+
+def act_shape(n, switch):
+    """Gain curve for a file bed: ACT_ONE before the first break, full after it (2 s ramp)."""
+    if switch <= 0:
+        return np.ones(n, np.float32)
+    t = np.arange(n) / SR
+    return (ACT_ONE + (1 - ACT_ONE) * np.clip((t - switch) / 2.0, 0, 1)).astype(np.float32)
+
+
 def read_wav(path):
     with wave.open(str(path)) as w:
         x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32) / 32768
@@ -229,7 +252,11 @@ def main(teaser, out_mp4=None, over=None):
             place(fx, t, sig, fit_under(voice, t, sig))
         mix += fx
     if opts["bed"]:
-        mix += music(len(voice) / SR, act_switch(data), opts["mood"], opts["seed"]) * MUSIC_LEVEL * opts["bed_gain"] * duck(voice)
+        if opts.get("bed_file"):
+            bed = file_bed(opts["bed_file"], len(voice)) * act_shape(len(voice), act_switch(data))
+        else:
+            bed = music(len(voice) / SR, act_switch(data), opts["mood"], opts["seed"])
+        mix += bed * MUSIC_LEVEL * opts["bed_gain"] * duck(voice)
     out_mp4 = pathlib.Path(out_mp4 or teaser / "teaser.mp4")
     out = out_mp4.with_suffix(".wav") if out_mp4.name != "teaser.mp4" else teaser / "soundtrack.wav"
     write_wav(out, mix / max(1.0, np.max(np.abs(mix))))
@@ -240,15 +267,19 @@ def main(teaser, out_mp4=None, over=None):
     kinds = {}
     for _, name, _, _ in cues:
         kinds[name] = kinds.get(name, 0) + 1
-    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); music {opts['mood'] + ', act two at ' + format(act_switch(data), '.1f') + ' s' if opts['bed'] else 'off'} -> {out_mp4}")
+    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); music {(opts.get('bed_file') or opts['mood']) + ', act two at ' + format(act_switch(data), '.1f') + ' s' if opts['bed'] else 'off'} -> {out_mp4}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--moods"):
+    args = sys.argv[1:]
+    if not args or args[0].startswith("-"):
         raise SystemExit(__doc__)
-    if len(sys.argv) == 3:
-        (pathlib.Path(sys.argv[1]) / "music").mkdir(exist_ok=True)
+    if "--moods" in args:
+        (pathlib.Path(args[0]) / "music").mkdir(exist_ok=True)
         for name in MOODS:
-            main(sys.argv[1], pathlib.Path(sys.argv[1]) / "music" / f"{name}.mp4", {"mood": name})
+            main(args[0], pathlib.Path(args[0]) / "music" / f"{name}.mp4", {"mood": name})
+    elif "--bed" in args:  # --bed <music file> [--out <mp4>]: a generated or licensed track instead of music.py
+        out = args[args.index("--out") + 1] if "--out" in args else None
+        main(args[0], out, {"bed_file": args[args.index("--bed") + 1]})
     else:
-        main(sys.argv[1])
+        main(args[0])
