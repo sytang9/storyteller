@@ -64,11 +64,13 @@ npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
 python3 <skill>/scripts/sound.py ..                  # cues + a music bed under the voice, loudnorm -> ../teaser.mp4
 ```
 
-`sound.py` synthesises every sound with numpy (no sample files, no licences, no API) and times it from the build:
-a cut ticks, a push, wipe, zoom or morph whooshes, a world camera move whooshes softly, a type beat lands on a low
-hit, a break resets and the bed rests, each brief's anchor word pops, and the end card chimes. Over speech a cue
-sits 12 dB under the voice; the bed dips under the voice. `direction.json` `"sound": {"cues", "bed", "cue_gain",
-"bed_gain"}` turns a part off or scales it. Listen once on headphones before you embed.
+`sound.py` synthesises every sound with numpy (no sample files, no licences, no API), after the team's reference
+mix (kamwoh's infrasel-video), and times it from the build: a cut ticks, a push, wipe, zoom or morph whooshes, a world
+camera move whooshes softly, a type beat thuds, a break shimmers, each brief's anchor word pops, and the end card plays
+a two-note success. Music: a drone with a soft heartbeat to the first break, then a 100 bpm pad, bass and arpeggio,
+one chord a bar; it ducks under the voice and holds the duck through pauses. Over speech a cue sits 12 dB under the
+voice. `direction.json` `"sound": {"cues", "bed", "cue_gain", "bed_gain"}` turns a part off or scales it.
+Listen once on headphones before you embed.
 
 Full captions overlay the narration on the bottom of each scene, over a soft fade in that beat's ground: the
 ground runs to the frame edge and moves with its transition, and scene content stays above y 876.
