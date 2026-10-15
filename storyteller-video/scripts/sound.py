@@ -1,12 +1,16 @@
-"""Sound cues and a music bed under the voice, synthesised with numpy: no sample files, no licences, no API.
+"""Sound cues and music under the voice, synthesised with numpy: no sample files, no licences, no API.
 
     python3 sound.py <teaser dir>          (ffmpeg on PATH; reads hf/data.js, hf/renders/raw.mp4, briefs/*.json)
 
-Writes <teaser>/soundtrack.wav and <teaser>/teaser.mp4 (video copied, audio = voice + cues + bed, loudnorm).
-Cues follow what the picture does, so they come from the build, not from a person:
+Writes <teaser>/soundtrack.wav and <teaser>/teaser.mp4 (video copied, audio = voice + cues + music, loudnorm).
+The sounds and the music follow kamwoh's infrasel-video mix.py (the team's reference cut); the timing comes from
+the build, not from a person:
   a cut ticks, a push / wipe / zoom / morph whooshes, a camera move across a world cut whooshes softly,
-  a type beat lands on a low hit, a break resets (the bed drops out), each brief's anchor word pops (a change on
-  screen), and the end card chimes. Pops rise in pitch inside a beat and keep a gap, so they never chatter.
+  a type beat lands on a thud, a break shimmers, each brief's anchor word pops (a change on screen), and the end
+  card plays a two-note success. Pops keep a gap and a cap a beat, so they never chatter.
+Music: act one (to the first break) is a low drone with a soft heartbeat; act two is a 100 bpm pad, bass and pluck
+arpeggio in C Am F G, one chord a bar, with a soft kick and shaker from its third bar. It ducks under the voice
+and holds the duck through short pauses. A video with no break plays act two throughout.
 Over speech a cue sits at least UNDER_DB under the voice around it, so it never masks a word.
 direction.json "sound": {"cues": true, "bed": true, "cue_gain": 1.0, "bed_gain": 1.0} turns parts off or scales them.
 """
@@ -23,49 +27,63 @@ POP_GAP = 0.9  # s between two pops
 POP_MAX = 4  # pops a beat
 POP_SKIP = 0.3  # s after a beat start: the transition sound owns that moment
 SWEEP = {"push", "wipe", "zoom", "morph"}
-CUE_DB = -14.0  # cue peak against full scale, before cue_gain
-BED_DB = -26.0  # bed level against full scale, before bed_gain and the duck
+VOICE_PEAK = 0.9
+MUSIC_LEVEL = 0.30  # music peak against the voice peak, before the duck
+FX_LEVEL = 0.8
 UNDER_DB = 12.0  # a cue over speech sits at least this far under the voice around it
-DUCK = 0.6  # the bed drops by this share while the voice speaks
-CHORDS = [(57, 60, 64), (53, 57, 60), (48, 52, 55), (55, 59, 62)]  # Am F C G (MIDI); a break moves up a fourth
+DUCK = 0.55  # the music drops by this share while the voice speaks
+DUCK_HOLD = 0.6  # s: the duck holds through pauses shorter than this
+BPM = 100
+CHORDS = [[48, 55, 60, 64, 67], [45, 52, 57, 60, 64], [41, 48, 53, 57, 60], [43, 50, 55, 59, 62]]  # C Am F G (MIDI)
+ARP = [2, 3, 4, 3, 2, 3, 4, 3]  # chord tones for the eight eighth notes of a bar
 
 
 def hz(m):
     return 440.0 * 2 ** ((m - 69) / 12)
 
 
-def env(n, attack, decay):
+def env(n, attack=0.005, decay=1.0):
     t = np.arange(n) / SR
-    return np.minimum(1.0, t / max(attack, 1e-4)) * np.exp(-t * decay)
+    return np.minimum(1, t / attack) * np.exp(-t * decay)
 
 
-def tone(f, dur, decay, attack=0.004, partials=((1, 1.0), (2, 0.25))):
+def tone(f, dur, decay, partials=((1, 1.0),), attack=0.005):
     t = np.arange(int(dur * SR)) / SR
-    return env(len(t), attack, decay) * sum(a * np.sin(2 * np.pi * f * k * t) for k, a in partials)
+    return (sum(a * np.sin(2 * np.pi * f * h * t) for h, a in partials) * env(len(t), attack, decay)).astype(np.float32)
 
 
 def noise(dur, seed):
-    return np.random.default_rng(seed).standard_normal(int(dur * SR))
+    return np.random.default_rng(seed).standard_normal(int(dur * SR)).astype(np.float32)
 
 
-def smooth(x, k):
-    return np.convolve(x, np.ones(k) / k, mode="same")
+def lowpass(x, k=8):
+    return np.convolve(x, np.ones(k) / k, "same").astype(np.float32)
+
+
+def cat(*sigs):
+    """Sum signals of different lengths (zero-padded)."""
+    n = max(len(x) for x in sigs)
+    return sum(np.pad(x, (0, n - len(x))) for x in sigs).astype(np.float32)
 
 
 def bank():
-    """name -> mono float signal, peak 1. Seeded, so every run makes the same sounds."""
+    """name -> mono float signal at its own level. Seeded, so every run makes the same sounds."""
     b = {}
-    b["tick"] = smooth(noise(0.04, 1), 4) * env(int(0.04 * SR), 0.0005, 160) + 0.3 * tone(1900, 0.04, 140)
-    n = int(0.55 * SR)
-    sweep = np.sin(np.linspace(0, np.pi, n)) ** 2  # rises and falls
-    b["whoosh"] = smooth(noise(0.55, 2), 24) * sweep
-    b["soft-whoosh"] = smooth(noise(0.7, 3), 48) * np.sin(np.linspace(0, np.pi, int(0.7 * SR))) ** 3
-    b["hit"] = tone(55, 0.9, 5, partials=((1, 1), (2, 0.4), (3, 0.1))) + 0.25 * smooth(noise(0.9, 4), 32) * env(int(0.9 * SR), 0.001, 18)
-    b["reset"] = tone(hz(45), 1.6, 2.2, attack=0.02, partials=((1, 1), (1.5, 0.3), (2, 0.2))) + 0.15 * smooth(noise(1.6, 5), 96) * env(int(1.6 * SR), 0.2, 2)
-    b["pop"] = tone(hz(76), 0.18, 26, partials=((1, 1), (2, 0.15)))
-    chime = [tone(hz(m), 1.4, 3.2, partials=((1, 1), (2, 0.2), (3, 0.05))) for m in (72, 76, 79)]
-    b["chime"] = sum(np.pad(c, (int(i * 0.08 * SR), 0))[: len(chime[0])] for i, c in enumerate(chime))
-    return {k: (v / np.max(np.abs(v))).astype(np.float32) for k, v in b.items()}
+    n = int(0.12 * SR)
+    t = np.arange(n) / SR
+    b["pop"] = (np.sin(2 * np.pi * (500 + 900 * t / 0.12) * t) * env(n, 0.002, 40) * 0.5).astype(np.float32)
+    b["tick"] = cat(tone(1800, 0.05, 90), 0.4 * tone(3600, 0.04, 120)) * 0.35
+    n = int(0.6 * SR)
+    t = np.arange(n) / SR
+    b["whoosh"] = lowpass(noise(0.6, 1), 14) * np.sin(np.pi * t / 0.6) ** 2 * 0.7
+    b["soft-whoosh"] = b["whoosh"] * 0.5
+    n = int(0.5 * SR)
+    t = np.arange(n) / SR
+    b["thud"] = (np.sin(2 * np.pi * (90 * np.exp(-t * 6)) * t) * env(n, 0.002, 9) * 0.7).astype(np.float32)
+    shimmer = sum(tone(hz(m), 1.8, 2.2, ((1, 1), (2.76, 0.25)), attack=0.02) for m in (84, 88, 91, 96))
+    b["shimmer"] = shimmer * 0.12 + lowpass(noise(1.8, 2), 3) * env(int(1.8 * SR), 0.3, 3) * 0.05
+    b["success"] = cat(tone(hz(76), 0.5, 7, ((1, 1), (2, 0.15))), np.pad(tone(hz(83), 0.6, 6, ((1, 1), (2, 0.15))), (int(0.09 * SR), 0))) * 0.22
+    return {k: v.astype(np.float32) for k, v in b.items()}
 
 
 def scene_words(scene):
@@ -107,12 +125,12 @@ def plan(data, briefs):
             elif kind in SWEEP:
                 cues.append((start - 0.3, "whoosh", 0.7, 0))
             elif b.get("world") and prev.get("world") and b["world"].get("view") != prev["world"].get("view"):
-                cues.append((start - 0.1, "soft-whoosh", 0.5, 0))  # the camera moves across the cut
+                cues.append((start - 0.1, "soft-whoosh", 0.8, 0))  # the camera moves across the cut
         if b.get("kind") == "break":
-            cues.append((start + 0.05, "reset", 0.9, 0))
+            cues.append((start + 0.05, "shimmer", 1.0, 0))
             continue
         if (b.get("scene") or {}).get("type_beat"):
-            cues.append((start + 0.05, "hit", 0.8, 0))
+            cues.append((start + 0.05, "thud", 1.0, 0))
         brief = briefs.get(b["id"])
         words = [a["word"] for a in brief.get("anchor_words", [])] if brief else scene_words(b.get("scene"))
         last, n, after = -9.0, 0, start + POP_SKIP
@@ -120,12 +138,12 @@ def plan(data, briefs):
             t = word_time(b, w, after)
             if t is None or t - last < POP_GAP:
                 continue
-            cues.append((t, "pop", 0.45, 2 * n))  # each pop a whole tone higher: the beat builds
+            cues.append((t, "pop", 0.6, 0))
             last, n, after = t, n + 1, t
             if n == POP_MAX:
                 break
     if data.get("end"):
-        cues.append((float(data["end"]["start"]) + 0.2, "chime", 0.7, 0))
+        cues.append((float(data["end"]["start"]) + 0.2, "success", 0.8, 0))
     return sorted(cues)
 
 
@@ -155,32 +173,59 @@ def fit_under(voice, t, sig):
     return float(min(1.0, v * 10 ** (-UNDER_DB / 20) / c))
 
 
-def bed(data, n):
-    """A soft pad, one chord a beat; it moves up a fourth after a break, and rests during the break itself."""
-    out = np.zeros(n, np.float32)
-    shift = 0
-    for i, b in enumerate(data["beats"]):
-        start, end = float(b["start"]), float(b["end"])
-        if b.get("kind") == "break":
-            shift = 5
-            continue
-        chord = CHORDS[i % len(CHORDS)]
-        dur = end - start + 1.0  # overlaps the next chord: no gap at the cut
-        t = np.arange(int(dur * SR)) / SR
-        fade = np.minimum(1, t / 0.8) * np.minimum(1, (dur - t) / 0.8)
-        pad = sum(np.sin(2 * np.pi * hz(m + shift) * t) + 0.2 * np.sin(2 * np.pi * hz(m + shift + 12) * t) for m in chord)
-        place(out, start - 0.5, (pad * fade / 4).astype(np.float32), 1.0)
-    return out
+def act_switch(data):
+    """Where act two starts: the first break, or 0 when the video has none."""
+    return next((float(b["start"]) for b in data["beats"] if b.get("kind") == "break"), 0.0)
+
+
+def music(dur, switch):
+    """Act one (0 .. switch): drone, heartbeat, soft clock. Act two (switch .. end): pad, bass, arpeggio, kick, shaker."""
+    n = int(dur * SR)
+    out = np.zeros(n + 4 * SR, np.float32)
+    if switch > 0:
+        t = np.arange(int((switch + 0.5) * SR)) / SR
+        drone = np.sin(2 * np.pi * hz(33) * t) + 0.5 * np.sin(2 * np.pi * hz(40) * t + 0.3) + 0.25 * np.sin(2 * np.pi * hz(45.1) * t)
+        drone *= 0.5 + 0.5 * np.sin(2 * np.pi * 0.25 * t) ** 2
+        fade = np.minimum(1, t / 2.0) * np.clip((switch + 0.2 - t) / 0.6, 0, 1)
+        out[: len(t)] += (drone * fade * 0.16).astype(np.float32)
+        beat, k = 60 / 72, 0
+        while k * beat < switch - 0.3:
+            place(out, k * beat, tone(55, 0.35, 10, ((1, 1), (2, 0.3))), 0.35)
+            place(out, k * beat + 0.22, tone(52, 0.3, 12, ((1, 1), (2, 0.3))), 0.22)
+            place(out, k * beat + beat / 2, tone(2600, 0.03, 160), 0.05)
+            k += 1
+    beat = 60 / BPM
+    bar = 4 * beat
+    shaker = lowpass(np.diff(noise(0.05, 3), prepend=0), 2) * env(int(0.05 * SR), 0.001, 70)
+    tk = np.arange(int(0.25 * SR)) / SR
+    kick = (np.sin(2 * np.pi * (45 + 80 * np.exp(-tk * 30)) * tk) * env(len(tk), 0.001, 14)).astype(np.float32)
+    for k in range(int((dur - switch) / bar) + 2):
+        tb = switch + k * bar
+        ch = CHORDS[k % len(CHORDS)]
+        place(out, tb, sum(tone(hz(m), bar + 0.5, 0.4, ((1, 1), (2, 0.15), (3, 0.05)), attack=0.4) for m in ch[1:]), 0.035)
+        place(out, tb, tone(hz(ch[0] - 12), bar, 1.2, ((1, 1), (2, 0.4))), 0.22)
+        if k >= 1:
+            for e in range(8):
+                place(out, tb + e * beat / 2, tone(hz(ch[ARP[e]] + 12), 0.5, 7, ((1, 1), (3, 0.12), (5, 0.04))), 0.06)
+        if k >= 2:
+            for q in (0, 2):
+                place(out, tb + q * beat, kick, 0.35)
+            for e in range(1, 8, 2):
+                place(out, tb + e * beat / 2, shaker, 0.05)
+    out = out[:n]
+    fo = min(n, int(3.0 * SR))
+    out[n - fo :] *= np.linspace(1, 0, fo)
+    return out / (np.max(np.abs(out)) + 1e-9)
 
 
 def duck(voice):
-    """1 where the voice is quiet, 1 - DUCK where it speaks, eased over about 0.2 s."""
-    hop = int(0.02 * SR)
-    frames = np.abs(voice[: len(voice) // hop * hop]).reshape(-1, hop).mean(axis=1)
-    speaking = (frames > max(1e-4, 0.1 * frames.max())).astype(np.float32)
-    eased = smooth(np.pad(speaking, (10, 10), mode="edge"), 10)[10:-10]
-    curve = np.interp(np.arange(len(voice)), np.arange(len(eased)) * hop, 1 - DUCK * eased)
-    return curve.astype(np.float32)
+    """1 where the voice is quiet, 1 - DUCK while it speaks; the duck holds through pauses under DUCK_HOLD."""
+    hop = int(0.01 * SR)
+    loud = np.abs(voice[: len(voice) // hop * hop]).reshape(-1, hop).max(axis=1) > 0.02 * VOICE_PEAK / 0.9
+    hold = int(DUCK_HOLD / 0.01) | 1
+    talking = np.convolve(loud.astype(float), np.ones(hold), "same") > 0
+    eased = np.convolve(talking.astype(float), np.ones(30) / 30, "same")
+    return np.interp(np.arange(len(voice)), np.arange(len(eased)) * hop, 1 - DUCK * eased).astype(np.float32)
 
 
 def read_wav(path):
@@ -211,16 +256,17 @@ def main(teaser):
     voice_wav = hf / "renders" / "voice.wav"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-vn", "-ac", "1", "-ar", str(SR), str(voice_wav)], check=True)
     voice = read_wav(voice_wav)
+    voice *= VOICE_PEAK / (np.max(np.abs(voice)) + 1e-9)
     mix = voice.copy()
     cues = plan(data, briefs)
     if opts["cues"]:
         sounds, fx = bank(), np.zeros_like(voice)
         for t, name, gain, semis in cues:
-            sig = pitch(sounds[name], semis) * gain * 10 ** (CUE_DB / 20) * opts["cue_gain"]
+            sig = pitch(sounds[name], semis) * gain * FX_LEVEL * opts["cue_gain"]
             place(fx, t, sig, fit_under(voice, t, sig))
         mix += fx
     if opts["bed"]:
-        mix += bed(data, len(voice)) * duck(voice) * 10 ** (BED_DB / 20) * opts["bed_gain"]
+        mix += music(len(voice) / SR, act_switch(data)) * MUSIC_LEVEL * opts["bed_gain"] * duck(voice)
     out = teaser / "soundtrack.wav"
     write_wav(out, mix / max(1.0, np.max(np.abs(mix))))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-i", str(out), "-map", "0:v", "-map", "1:a", "-c:v", "copy",
@@ -228,7 +274,7 @@ def main(teaser):
     kinds = {}
     for _, name, _, _ in cues:
         kinds[name] = kinds.get(name, 0) + 1
-    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); bed {'on' if opts['bed'] else 'off'} -> {teaser / 'teaser.mp4'}")
+    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); music {'on, act two at ' + format(act_switch(data), '.1f') + ' s' if opts['bed'] else 'off'} -> {teaser / 'teaser.mp4'}")
 
 
 if __name__ == "__main__":
