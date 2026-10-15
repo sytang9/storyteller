@@ -67,8 +67,9 @@ python3 <skill>/scripts/sound.py ..                  # cues + a music bed under 
 `sound.py` synthesises every sound with numpy (no sample files, no licences, no API), after the team's reference
 mix (kamwoh's infrasel-video), and times it from the build: a cut ticks, a push, wipe, zoom or morph whooshes, a world
 camera move whooshes softly, a type beat thuds, a break shimmers, each brief's anchor word pops, and the end card plays
-a two-note success. Music: a drone with a soft heartbeat to the first break, then a 100 bpm pad, bass and arpeggio,
-one chord a bar; it ducks under the voice and holds the duck through pauses. Over speech a cue sits 12 dB under the
+a two-note success. Music (`scripts/music.py`): the mood from `direction.json` `sound.mood` (references/direction.md,
+Music), soft to the first break and full after it; it ducks under the voice and holds the duck through pauses.
+`--moods` renders one video per mood into `music/` for a person to pick by ear. Over speech a cue sits 12 dB under the
 voice. `direction.json` `"sound": {"cues", "bed", "cue_gain", "bed_gain"}` turns a part off or scales it.
 Listen once on headphones before you embed.
 

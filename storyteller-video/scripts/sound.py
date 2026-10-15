@@ -1,6 +1,6 @@
 """Sound cues and music under the voice, synthesised with numpy: no sample files, no licences, no API.
 
-    python3 sound.py <teaser dir>          (ffmpeg on PATH; reads hf/data.js, hf/renders/raw.mp4, briefs/*.json)
+    python3 sound.py <teaser dir> [--moods]   (ffmpeg on PATH; reads hf/data.js, hf/renders/raw.mp4, briefs/*.json)
 
 Writes <teaser>/soundtrack.wav and <teaser>/teaser.mp4 (video copied, audio = voice + cues + music, loudnorm).
 The sounds and the music follow kamwoh's infrasel-video mix.py (the team's reference cut); the timing comes from
@@ -8,11 +8,12 @@ the build, not from a person:
   a cut ticks, a push / wipe / zoom / morph whooshes, a camera move across a world cut whooshes softly,
   a type beat lands on a thud, a break shimmers, each brief's anchor word pops (a change on screen), and the end
   card plays a two-note success. Pops keep a gap and a cap a beat, so they never chatter.
-Music: act one (to the first break) is a low drone with a soft heartbeat; act two is a 100 bpm pad, bass and pluck
-arpeggio in C Am F G, one chord a bar, with a soft kick and shaker from its third bar. It ducks under the voice
-and holds the duck through short pauses. A video with no break plays act two throughout.
+Music (music.py): a mood (tempo, key, progression, instruments) played softly in act one (to the first break) and
+in full in act two. It ducks under the voice and holds the duck through short pauses.
 Over speech a cue sits at least UNDER_DB under the voice around it, so it never masks a word.
-direction.json "sound": {"cues": true, "bed": true, "cue_gain": 1.0, "bed_gain": 1.0} turns parts off or scales them.
+direction.json "sound": {"cues": true, "bed": true, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0}
+turns parts off, scales them, and picks the music. --moods writes music/<mood>.mp4 for every mood, for a person to
+pick by ear: python3 sound.py <teaser dir> --moods
 """
 import json
 import pathlib
@@ -21,6 +22,8 @@ import sys
 import wave
 
 import numpy as np
+
+from music import MOODS, music
 
 SR = 48000
 POP_GAP = 0.9  # s between two pops
@@ -33,9 +36,6 @@ FX_LEVEL = 0.8
 UNDER_DB = 12.0  # a cue over speech sits at least this far under the voice around it
 DUCK = 0.55  # the music drops by this share while the voice speaks
 DUCK_HOLD = 0.6  # s: the duck holds through pauses shorter than this
-BPM = 100
-CHORDS = [[48, 55, 60, 64, 67], [45, 52, 57, 60, 64], [41, 48, 53, 57, 60], [43, 50, 55, 59, 62]]  # C Am F G (MIDI)
-ARP = [2, 3, 4, 3, 2, 3, 4, 3]  # chord tones for the eight eighth notes of a bar
 
 
 def hz(m):
@@ -178,46 +178,6 @@ def act_switch(data):
     return next((float(b["start"]) for b in data["beats"] if b.get("kind") == "break"), 0.0)
 
 
-def music(dur, switch):
-    """Act one (0 .. switch): drone, heartbeat, soft clock. Act two (switch .. end): pad, bass, arpeggio, kick, shaker."""
-    n = int(dur * SR)
-    out = np.zeros(n + 4 * SR, np.float32)
-    if switch > 0:
-        t = np.arange(int((switch + 0.5) * SR)) / SR
-        drone = np.sin(2 * np.pi * hz(33) * t) + 0.5 * np.sin(2 * np.pi * hz(40) * t + 0.3) + 0.25 * np.sin(2 * np.pi * hz(45.1) * t)
-        drone *= 0.5 + 0.5 * np.sin(2 * np.pi * 0.25 * t) ** 2
-        fade = np.minimum(1, t / 2.0) * np.clip((switch + 0.2 - t) / 0.6, 0, 1)
-        out[: len(t)] += (drone * fade * 0.16).astype(np.float32)
-        beat, k = 60 / 72, 0
-        while k * beat < switch - 0.3:
-            place(out, k * beat, tone(55, 0.35, 10, ((1, 1), (2, 0.3))), 0.35)
-            place(out, k * beat + 0.22, tone(52, 0.3, 12, ((1, 1), (2, 0.3))), 0.22)
-            place(out, k * beat + beat / 2, tone(2600, 0.03, 160), 0.05)
-            k += 1
-    beat = 60 / BPM
-    bar = 4 * beat
-    shaker = lowpass(np.diff(noise(0.05, 3), prepend=0), 2) * env(int(0.05 * SR), 0.001, 70)
-    tk = np.arange(int(0.25 * SR)) / SR
-    kick = (np.sin(2 * np.pi * (45 + 80 * np.exp(-tk * 30)) * tk) * env(len(tk), 0.001, 14)).astype(np.float32)
-    for k in range(int((dur - switch) / bar) + 2):
-        tb = switch + k * bar
-        ch = CHORDS[k % len(CHORDS)]
-        place(out, tb, sum(tone(hz(m), bar + 0.5, 0.4, ((1, 1), (2, 0.15), (3, 0.05)), attack=0.4) for m in ch[1:]), 0.035)
-        place(out, tb, tone(hz(ch[0] - 12), bar, 1.2, ((1, 1), (2, 0.4))), 0.22)
-        if k >= 1:
-            for e in range(8):
-                place(out, tb + e * beat / 2, tone(hz(ch[ARP[e]] + 12), 0.5, 7, ((1, 1), (3, 0.12), (5, 0.04))), 0.06)
-        if k >= 2:
-            for q in (0, 2):
-                place(out, tb + q * beat, kick, 0.35)
-            for e in range(1, 8, 2):
-                place(out, tb + e * beat / 2, shaker, 0.05)
-    out = out[:n]
-    fo = min(n, int(3.0 * SR))
-    out[n - fo :] *= np.linspace(1, 0, fo)
-    return out / (np.max(np.abs(out)) + 1e-9)
-
-
 def duck(voice):
     """1 where the voice is quiet, 1 - DUCK while it speaks; the duck holds through pauses under DUCK_HOLD."""
     hop = int(0.01 * SR)
@@ -242,13 +202,16 @@ def write_wav(path, x):
         w.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes())
 
 
-def main(teaser):
+def main(teaser, out_mp4=None, over=None):
+    over = over or {}
     teaser = pathlib.Path(teaser)
     hf = teaser / "hf"
     js = (hf / "data.js").read_text()
     data = json.loads(js[js.index("{") : js.rindex("}") + 1])
     direction = json.loads((teaser / "direction.json").read_text()) if (teaser / "direction.json").exists() else {}
-    opts = {"cues": True, "bed": True, "cue_gain": 1.0, "bed_gain": 1.0, **direction.get("sound", {})}
+    opts = {"cues": True, "bed": True, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0, **direction.get("sound", {}), **over}
+    if opts["mood"] not in MOODS:
+        raise SystemExit(f"sound.mood {opts['mood']!r} not in {sorted(MOODS)}")
     briefs = {p.stem: json.loads(p.read_text()) for p in (teaser / "briefs").glob("*.json")} if (teaser / "briefs").is_dir() else {}
     raw = hf / "renders" / "raw.mp4"
     if not raw.exists():
@@ -266,18 +229,26 @@ def main(teaser):
             place(fx, t, sig, fit_under(voice, t, sig))
         mix += fx
     if opts["bed"]:
-        mix += music(len(voice) / SR, act_switch(data)) * MUSIC_LEVEL * opts["bed_gain"] * duck(voice)
-    out = teaser / "soundtrack.wav"
+        mix += music(len(voice) / SR, act_switch(data), opts["mood"], opts["seed"]) * MUSIC_LEVEL * opts["bed_gain"] * duck(voice)
+    out_mp4 = pathlib.Path(out_mp4 or teaser / "teaser.mp4")
+    out = out_mp4.with_suffix(".wav") if out_mp4.name != "teaser.mp4" else teaser / "soundtrack.wav"
     write_wav(out, mix / max(1.0, np.max(np.abs(mix))))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-i", str(out), "-map", "0:v", "-map", "1:a", "-c:v", "copy",
-                    "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-c:a", "aac", "-b:a", "192k", str(teaser / "teaser.mp4")], check=True)
+                    "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-c:a", "aac", "-b:a", "192k", str(out_mp4)], check=True)
+    if out_mp4.name != "teaser.mp4":
+        out.unlink()  # a mood variant keeps only its video
     kinds = {}
     for _, name, _, _ in cues:
         kinds[name] = kinds.get(name, 0) + 1
-    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); music {'on, act two at ' + format(act_switch(data), '.1f') + ' s' if opts['bed'] else 'off'} -> {teaser / 'teaser.mp4'}")
+    print(f"{len(cues)} cues ({', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))}); music {opts['mood'] + ', act two at ' + format(act_switch(data), '.1f') + ' s' if opts['bed'] else 'off'} -> {out_mp4}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--moods"):
         raise SystemExit(__doc__)
-    main(sys.argv[1])
+    if len(sys.argv) == 3:
+        (pathlib.Path(sys.argv[1]) / "music").mkdir(exist_ok=True)
+        for name in MOODS:
+            main(sys.argv[1], pathlib.Path(sys.argv[1]) / "music" / f"{name}.mp4", {"mood": name})
+    else:
+        main(sys.argv[1])

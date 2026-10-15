@@ -124,6 +124,15 @@ whole length reads as one long slide.
 - **Breaks** (`"kind": "break"`, `"dur"` 0.5-3.0 s, no caption): a silent graphic beat between acts (a shape that
   morphs, a pattern that wipes, the next act's word). Any video over 60 s has one.
 
+## Music (`direction.json` `"sound"`)
+
+Pick the mood with the look, from the story's tone, as you pick its grounds: `"sound": {"mood": "<mood>", "seed": <int>}`.
+`scripts/music.py` lists the moods: `calm-tech` (steady, product or system), `curious` (a question, research),
+`warm-keys` (people, a slow argument), `pulse` (urgency, a cost or a race), `ambient` (reflective, spacious),
+`bright` (a launch, a win). Change the seed for a new voicing and arpeggio inside the mood. Act one (to the first
+break) plays it softly and act two in full, so the break is also the music's turn. When unsure, render every mood
+with `sound.py <teaser> --moods` and let a person pick by ear on a page: nobody in the pipeline can hear.
+
 ## Motion brief (for any scene you or a subagent design)
 
 - Per scene: the one-sentence message, the anchor words, and the one change of state each motion shows.

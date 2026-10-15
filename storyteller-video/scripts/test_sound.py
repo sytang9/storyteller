@@ -1,7 +1,8 @@
 """python3 -m pytest -q test_sound.py"""
 import numpy as np
 
-from sound import POP_GAP, POP_MAX, SR, UNDER_DB, act_switch, bank, duck, fit_under, music, plan
+from music import MOODS, music
+from sound import POP_GAP, POP_MAX, SR, UNDER_DB, act_switch, bank, duck, fit_under, plan
 
 
 def words(start, text, step=0.5):
@@ -58,8 +59,24 @@ def test_bank_is_the_same_every_run_and_stays_under_full_scale():
 def test_act_two_starts_at_the_first_break_and_music_fades_out():
     data = {"beats": [beat("b1", 0), beat("b2", 5, kind="break"), beat("b3", 9)]}
     assert act_switch(data) == 5 and act_switch({"beats": [beat("b1", 0)]}) == 0
-    m = music(12.0, 5.0)
-    assert len(m) == 12 * SR and abs(np.max(np.abs(m)) - 1) < 1e-5 and abs(m[-1]) < 1e-3
+    for mood in MOODS:
+        m = music(12.0, 5.0, mood)
+        assert len(m) == 12 * SR and abs(np.max(np.abs(m)) - 1) < 1e-5 and abs(m[-1]) < 1e-3
+
+
+def test_act_one_is_quieter_and_has_no_sub_bass():
+    m = music(30.0, 15.0, "calm-tech")
+    one, two = m[: 14 * SR], m[16 * SR : 27 * SR]
+    assert np.sqrt(np.mean(one**2)) < 0.8 * np.sqrt(np.mean(two**2))
+    spec = np.abs(np.fft.rfft(one))
+    freqs = np.fft.rfftfreq(len(one), 1 / SR)
+    assert spec[freqs < 60].sum() < 0.01 * spec.sum()
+
+
+def test_seed_varies_the_music_inside_a_mood():
+    a, b = music(10.0, 0.0, "curious", 0), music(10.0, 0.0, "curious", 1)
+    assert not np.allclose(a, b)
+    assert np.array_equal(a, music(10.0, 0.0, "curious", 0))
 
 
 def test_duck_lowers_the_bed_only_while_the_voice_speaks():
