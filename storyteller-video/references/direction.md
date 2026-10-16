@@ -126,7 +126,8 @@ whole length reads as one long slide.
 
 ## Music (`direction.json` `"sound"`)
 
-Pick the mood with the look, from the story's tone, as you pick its grounds: `"sound": {"mood": "<mood>", "seed": <int>}`.
+Music is off by default (the cues play without it); only when the user asks for background music, set `"bed": true`
+and pick the mood with the look, from the story's tone, as you pick its grounds: `"sound": {"mood": "<mood>", "seed": <int>}`.
 `scripts/music.py` lists the moods: `calm-tech` (steady, product or system), `curious` (a question, research),
 `warm-keys` (people, a slow argument), `pulse` (urgency, a cost or a race), `ambient` (reflective, spacious),
 `bright` (a launch, a win). Change the seed for a new voicing and arpeggio inside the mood. Act one (to the first

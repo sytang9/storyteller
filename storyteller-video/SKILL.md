@@ -35,7 +35,7 @@ after them. Fresh subagents do the work that needs a clean context, and hand off
 | 4b. Media | main thread | `media.json` from the metaphor table, then `scripts/fetch_assets.py`: open-licence icons, and a photo only where the real object is the point (`references/media.md`); look at every photo |
 | 4c. World | one subagent, before the scene designers (`references/world.md`) | `world.js` (2D, or 3D with Three.js), one frame per view, and the list of views and object ids |
 | 5. Bespoke scenes | briefs by the main thread, then one subagent per scene, in parallel, each in its own sandbox (`references/scene-worker.md`, `scripts/scene_sandbox.py`) | `<id>.js` custom module + its frames; packet: the beat, its word times, `direction.md`, `references/motion-craft.md` (the pro motion rules and `assets/hf/examples/craft-example.js`), `references/scenes.md`, the media ids, the world's views and object ids (animate them; never redraw the set) |
-| 6. Compose and render | main thread | `teaser.mp4` (voice, sound cues and a bed from `scripts/sound.py`), `teaser.vtt`, `poster.jpg`; gate: `scripts/frame_scan.py` (no strobe, no empty frames) |
+| 6. Compose and render | main thread | `teaser.mp4` (voice and sound cues from `scripts/sound.py`), `teaser.vtt`, `poster.jpg`; gate: `scripts/frame_scan.py` (no strobe, no empty frames) |
 | 7. Critic | fresh subagent, frames only; then a fresh fixer per flagged scene (`references/scene-worker.md`) | `qc/sheet.png` from `scripts/qc_sheet.py`, then `qc/critic.json`; fix the 3 worst, two rounds at most (`references/critic.md`) |
 | 8. Embed | main thread | the report rebuilt with the video in it (`references/critic.md`) |
 
@@ -61,13 +61,14 @@ python3 -m pytest -q test_build.py
 export HYPERFRAMES_NO_TELEMETRY=1 PATH=$PWD/.bin:$PATH  # hf/.bin: symlinks to ffmpeg + ffprobe when not on PATH
 npx --yes hyperframes@0.8.126 check                    # 0 errors: render does not stop on a scene error, it ships a blank video
 npx --yes hyperframes@0.8.126 render --quality delivery --output renders/raw.mp4
-python3 <skill>/scripts/sound.py ..                  # cues + a music bed under the voice, loudnorm -> ../teaser.mp4
+python3 <skill>/scripts/sound.py ..                  # sound cues under the voice (music off by default), loudnorm -> ../teaser.mp4
 ```
 
 `sound.py` synthesises every sound with numpy (no sample files, no licences, no API), after the team's reference
 mix (kamwoh's infrasel-video), and times it from the build: a cut ticks, a push, wipe, zoom or morph whooshes, a world
 camera move whooshes softly, a type beat thuds, a break shimmers, each brief's anchor word pops, and the end card plays
-a two-note success. Music (`scripts/music.py`): the mood from `direction.json` `sound.mood` (references/direction.md,
+a two-note success. Music is off by default; turn it on (`"bed": true`) only when the user asks for background
+music. Music (`scripts/music.py`): the mood from `direction.json` `sound.mood` (references/direction.md,
 Music), soft to the first break and full after it; it ducks under the voice and holds the duck through pauses.
 `--moods` renders one video per mood into `music/` for a person to pick by ear; `--bed <file>` mixes a real track instead,
 such as an ACE-Step take (`references/music-gen.md`). Over speech a cue sits 12 dB under the

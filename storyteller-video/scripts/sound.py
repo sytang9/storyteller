@@ -11,8 +11,9 @@ the build, not from a person:
 Music (music.py): a mood (tempo, key, progression, instruments) played softly in act one (to the first break) and
 in full in act two. It ducks under the voice and holds the duck through short pauses.
 Over speech a cue sits at least UNDER_DB under the voice around it, so it never masks a word.
-direction.json "sound": {"cues": true, "bed": true, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0}
-turns parts off, scales them, and picks the music. --moods writes music/<mood>.mp4 for every mood, for a person to
+direction.json "sound": {"cues": true, "bed": false, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0}
+turns parts on or off, scales them, and picks the music. The music is off by default (cues only): turn it on only
+when the user asks for background music. --moods writes music/<mood>.mp4 for every mood, for a person to
 pick by ear: python3 sound.py <teaser dir> --moods. "bed_file" (or --bed <file> [--out <mp4>]) uses a music file instead,
 such as an ACE-Step track (references/music-gen.md).
 """
@@ -232,7 +233,7 @@ def main(teaser, out_mp4=None, over=None):
     js = (hf / "data.js").read_text()
     data = json.loads(js[js.index("{") : js.rindex("}") + 1])
     direction = json.loads((teaser / "direction.json").read_text()) if (teaser / "direction.json").exists() else {}
-    opts = {"cues": True, "bed": True, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0, **direction.get("sound", {}), **over}
+    opts = {"cues": True, "bed": False, "cue_gain": 1.0, "bed_gain": 1.0, "mood": "calm-tech", "seed": 0, **direction.get("sound", {}), **over}
     if opts["mood"] not in MOODS:
         raise SystemExit(f"sound.mood {opts['mood']!r} not in {sorted(MOODS)}")
     briefs = {p.stem: json.loads(p.read_text()) for p in (teaser / "briefs").glob("*.json")} if (teaser / "briefs").is_dir() else {}
@@ -277,9 +278,9 @@ if __name__ == "__main__":
     if "--moods" in args:
         (pathlib.Path(args[0]) / "music").mkdir(exist_ok=True)
         for name in MOODS:
-            main(args[0], pathlib.Path(args[0]) / "music" / f"{name}.mp4", {"mood": name})
+            main(args[0], pathlib.Path(args[0]) / "music" / f"{name}.mp4", {"mood": name, "bed": True})
     elif "--bed" in args:  # --bed <music file> [--out <mp4>]: a generated or licensed track instead of music.py
         out = args[args.index("--out") + 1] if "--out" in args else None
-        main(args[0], out, {"bed_file": args[args.index("--bed") + 1]})
+        main(args[0], out, {"bed_file": args[args.index("--bed") + 1], "bed": True})
     else:
         main(args[0])
